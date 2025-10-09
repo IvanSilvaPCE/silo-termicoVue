@@ -1,0 +1,55 @@
+modules = ["vue-node-20", "web", "nodejs-20"]
+run = "npm run dev"
+
+[nix]
+channel = "stable-25_05"
+
+
+
+[workflows]
+runButton = "Vue Dev"
+
+[[workflows.workflow]]
+name = "Dev Server"
+author = 43949591
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[[workflows.workflow]]
+name = "React Dev"
+author = 45371843
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install && npm run dev"
+
+[[workflows.workflow]]
+name = "Vue Dev"
+author = 45371843
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd Vue && rm -rf node_modules package-lock.json && npm cache clean --force && npm install --legacy-peer-deps && npm run serve"
+
+[[workflows.workflow]]
+name = "Install All"
+author = 45371843
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install && cd Vue && npm install --legacy-peer-deps"
+
+[[workflows.workflow]]
+name = "Vue Clean Install"
+author = 45371843
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd Vue && rm -rf node_modules package-lock.json && npm cache clean --force && npm install --legacy-peer-deps"
