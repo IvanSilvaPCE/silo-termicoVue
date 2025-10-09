@@ -109,10 +109,10 @@
         <circle 
           :cx="centroX" 
           :cy="centroY" 
-          r="5.7138"
-          fill="#06335E"
-          stroke="black" 
-          stroke-width="0.8"
+          :r="config.tamanhoCirculoPendulo || 5.7138"
+          :fill="getCorPendulo(pendulo.label)"
+          :stroke="getBordaCabo(pendulo.label)" 
+          :stroke-width="config.espessuraBordaCirculo || 1.5"
           :title="`Pêndulo ${pendulo.label}`"
         />
 
@@ -193,117 +193,108 @@ export default {
     pendulosComPosicao() {
       const pendulos = []
 
-      // 🎯 LÓGICA DE AGRUPAMENTO POR QUANTIDADE DE SENSORES
+      // 🎯 LÓGICA DE AGRUPAMENTO POR TIPO DE POSIÇÃO
       // Coletar informações de todos os pêndulos
-      const pendulosComSensores = []
+      const pendulosComTipo = []
       for (let i = 1; i <= this.quantidadePendulos; i++) {
-        const numSensores = this.config.sensoresPorPendulo?.[i] || 5
-        pendulosComSensores.push({
+        const tipoPosicao = this.config.tipoPosicaoPendulo?.[i] || 'central'
+        pendulosComTipo.push({
           label: i,
-          numSensores: numSensores
+          tipoPosicao: tipoPosicao
         })
       }
 
-      // Ordenar por número de sensores (decrescente)
-      pendulosComSensores.sort((a, b) => b.numSensores - a.numSensores)
-
-      // Encontrar quantidades únicas de sensores para criar grupos
-      const quantidadesUnicas = [...new Set(pendulosComSensores.map(p => p.numSensores))].sort((a, b) => b - a)
-
-      // Separar em 3 níveis baseado na quantidade de sensores
+      // Separar em 3 níveis baseado no tipo de posição
       let gruposPendulos = {
-        centro: [],    // Pêndulos com MAIS sensores (mais próximo do centro)
-        meio: [],      // Pêndulos com quantidade intermediária
-        externo: []    // Pêndulos com MENOS sensores (mais distante)
+        central: [],       // Pêndulos centrais
+        intermediario: [], // Pêndulos intermediários
+        lateral: []        // Pêndulos laterais
       }
 
-      if (quantidadesUnicas.length === 1) {
-        // Se todos têm a mesma quantidade, distribui no círculo médio
-        gruposPendulos.meio = [...pendulosComSensores]
-      } else if (quantidadesUnicas.length === 2) {
-        // Se há 2 quantidades diferentes: maior no centro, menor no externo
-        gruposPendulos.centro = pendulosComSensores.filter(p => p.numSensores === quantidadesUnicas[0])
-        gruposPendulos.externo = pendulosComSensores.filter(p => p.numSensores === quantidadesUnicas[1])
-      } else {
-        // Se há 3 ou mais quantidades: maior no centro, menor no externo, resto no meio
-        const maiorQuantidade = quantidadesUnicas[0]
-        const menorQuantidade = quantidadesUnicas[quantidadesUnicas.length - 1]
-
-        gruposPendulos.centro = pendulosComSensores.filter(p => p.numSensores === maiorQuantidade)
-        gruposPendulos.externo = pendulosComSensores.filter(p => p.numSensores === menorQuantidade)
-        gruposPendulos.meio = pendulosComSensores.filter(p => 
-          p.numSensores !== maiorQuantidade && p.numSensores !== menorQuantidade
-        )
-      }
+      pendulosComTipo.forEach(p => {
+        if (p.tipoPosicao === 'central') {
+          gruposPendulos.central.push(p)
+        } else if (p.tipoPosicao === 'intermediario') {
+          gruposPendulos.intermediario.push(p)
+        } else if (p.tipoPosicao === 'lateral') {
+          gruposPendulos.lateral.push(p)
+        }
+      })
 
       // Ordenar cada grupo numericamente (P1, P2, P3, etc.)
       const ordenarNumericamente = (grupos) => {
         return grupos.sort((a, b) => a.label - b.label)
       }
 
-      gruposPendulos.centro = ordenarNumericamente(gruposPendulos.centro)
-      gruposPendulos.meio = ordenarNumericamente(gruposPendulos.meio)
-      gruposPendulos.externo = ordenarNumericamente(gruposPendulos.externo)
+      gruposPendulos.central = ordenarNumericamente(gruposPendulos.central)
+      gruposPendulos.intermediario = ordenarNumericamente(gruposPendulos.intermediario)
+      gruposPendulos.lateral = ordenarNumericamente(gruposPendulos.lateral)
 
-      // Posicionar grupos: externo -> meio -> centro
-      // Grupo externo
-      gruposPendulos.externo.forEach((pendulo, index) => {
+      // Posicionar grupos: lateral -> intermediario -> central
+      // Grupo lateral
+      gruposPendulos.lateral.forEach((pendulo, index) => {
         if (this.posicoesManualPendulos[pendulo.label]) {
           // Se há posição manual, usa ela
           pendulos.push({
             label: pendulo.label,
             transform: `translate(${this.posicoesManualPendulos[pendulo.label].x},${this.posicoesManualPendulos[pendulo.label].y})`,
-            nivel: 'externo'
+            nivel: 'lateral',
+            tipoPosicao: pendulo.tipoPosicao
           })
         } else {
           // Posição automática
           pendulos.push({
             label: pendulo.label,
-            transform: this.calcularTransformCircularIndependente('externo', index, gruposPendulos.externo.length),
-            nivel: 'externo'
+            transform: this.calcularTransformCircularIndependente('lateral', index, gruposPendulos.lateral.length),
+            nivel: 'lateral',
+            tipoPosicao: pendulo.tipoPosicao
           })
         }
       })
 
-      // Grupo meio
-      gruposPendulos.meio.forEach((pendulo, index) => {
+      // Grupo intermediário
+      gruposPendulos.intermediario.forEach((pendulo, index) => {
         if (this.posicoesManualPendulos[pendulo.label]) {
           pendulos.push({
             label: pendulo.label,
             transform: `translate(${this.posicoesManualPendulos[pendulo.label].x},${this.posicoesManualPendulos[pendulo.label].y})`,
-            nivel: 'meio'
+            nivel: 'intermediario',
+            tipoPosicao: pendulo.tipoPosicao
           })
         } else {
           pendulos.push({
             label: pendulo.label,
-            transform: this.calcularTransformCircularIndependente('meio', index, gruposPendulos.meio.length),
-            nivel: 'meio'
+            transform: this.calcularTransformCircularIndependente('intermediario', index, gruposPendulos.intermediario.length),
+            nivel: 'intermediario',
+            tipoPosicao: pendulo.tipoPosicao
           })
         }
       })
 
-      // Grupo centro
-      gruposPendulos.centro.forEach((pendulo, index) => {
+      // Grupo central
+      gruposPendulos.central.forEach((pendulo, index) => {
         if (this.posicoesManualPendulos[pendulo.label]) {
           pendulos.push({
             label: pendulo.label,
             transform: `translate(${this.posicoesManualPendulos[pendulo.label].x},${this.posicoesManualPendulos[pendulo.label].y})`,
-            nivel: 'centro'
+            nivel: 'central',
+            tipoPosicao: pendulo.tipoPosicao
           })
         } else {
           let transform
-          if (gruposPendulos.centro.length === 1) {
+          if (gruposPendulos.central.length === 1) {
             // Pêndulo único no centro fica no centro geométrico
-            transform = this.polarParaRetangular(0, 0)
+            transform = this.polarParaRetangular(0, 0, 'central')
           } else {
             // Múltiplos pêndulos centrais têm seu próprio círculo
-            transform = this.calcularTransformCircularIndependente('centro', index, gruposPendulos.centro.length)
+            transform = this.calcularTransformCircularIndependente('central', index, gruposPendulos.central.length)
           }
           
           pendulos.push({
             label: pendulo.label,
             transform: transform,
-            nivel: 'centro'
+            nivel: 'central',
+            tipoPosicao: pendulo.tipoPosicao
           })
         }
       })
@@ -323,22 +314,26 @@ export default {
     // 🎯 MÉTODO PRINCIPAL: Calcular transform com cada círculo independente
     calcularTransformCircularIndependente(nivel, index, totalNoNivel) {
       let raio = 0
+      let multiplicadorAfastamento = 1.0
 
-      // Definir raio baseado no nível (mesmos valores do TopoView.vue)
+      // Definir raio base e multiplicador baseado no tipo de posição
       switch (nivel) {
-        case 'centro':
+        case 'central':
           raio = 15 // Círculo pequeno ao redor do centro
+          multiplicadorAfastamento = this.config?.afastamentoCentral || 1.0
           break
-        case 'meio':
+        case 'intermediario':
           raio = 37 // Círculo médio
+          multiplicadorAfastamento = this.config?.afastamentoIntermediario || 1.0
           break
-        case 'externo':
+        case 'lateral':
           raio = 55 // Círculo externo
+          multiplicadorAfastamento = this.config?.afastamentoLateral || 1.0
           break
       }
 
-      // Aplicar multiplicador de afastamento
-      raio = raio * this.afastamentoPendulos
+      // Aplicar multiplicador de afastamento específico da camada
+      raio = raio * multiplicadorAfastamento
 
       // Cada círculo começa no minuto 15 (0 graus = 3 horas)
       const anguloInicial = 0
@@ -354,12 +349,16 @@ export default {
         anguloFinal = anguloInicial + (incrementoAngulo * index)
       }
 
-      return this.polarParaRetangular(raio, anguloFinal)
+      return this.polarParaRetangular(raio, anguloFinal, nivel)
     },
 
-    polarParaRetangular(raio, angulo) {
+    polarParaRetangular(raio, angulo, nivel = null) {
+      // Aplicar rotação global dos pêndulos
+      const rotacaoGlobal = this.config?.rotacaoPendulos || 0
+      const anguloComRotacao = angulo + rotacaoGlobal
+      
       // Converte o ângulo de graus para radianos e inverte
-      const anguloRad = (angulo * Math.PI) / 180 * -1
+      const anguloRad = (anguloComRotacao * Math.PI) / 180 * -1
 
       // Calcula o deslocamento em coordenadas retangulares
       const x = raio * Math.cos(anguloRad)
@@ -437,6 +436,31 @@ export default {
       this.isDragging = false
       this.dragElement = null
       this.dragType = null
+    },
+
+    getCorPendulo(numeroPendulo) {
+      const tipoPosicao = this.config.tipoPosicaoPendulo?.[numeroPendulo] || 'central'
+      
+      switch (tipoPosicao) {
+        case 'lateral':
+          return '#FF6B35'
+        case 'central':
+          return '#3A78FD'
+        case 'intermediario':
+          return '#4ECDC4'
+        default:
+          return '#3A78FD'
+      }
+    },
+    
+    getBordaCabo(numeroPendulo) {
+      const tipoCabo = this.config.tipoCaboPendulo?.[numeroPendulo] || 'digital'
+      
+      return tipoCabo === 'analogico' ? '#FFD93D' : '#6C63FF'
+    },
+    
+    getEspessuraBordaCabo(numeroPendulo) {
+      return 2
     }
   }
 }

@@ -1,5 +1,5 @@
 <template>
-  <svg 
+  <svg
     xmlns="http://www.w3.org/2000/svg"
     :viewBox="`0 0 ${larguraSVG} ${alturaSVG}`"
     :style="{
@@ -18,35 +18,35 @@
       zIndex: 2,
       opacity: imagemFundo.url ? opacidadesSvg.geral : 1,
       transition: 'opacity 0.3s ease-in-out'
-    }" 
+    }"
     preserveAspectRatio="xMidYMid meet"
   >
     <!-- Estrutura do Silo -->
     <g :transform="transformSilo" :style="{ opacity: opacidadesSvg.estrutura }">
       <!-- Corpo do silo (polígono) -->
       <polygon fill="#E7E7E7" :points="pontosSilo" />
-      
+
       <!-- Tampa superior -->
       <path
         fill="#999999"
         d="M71.6612 0.7892c-22.3726,7.3556 -44.7452,14.711 -67.1178,22.0666 -2.8377,0.9516 -4.5433,2.0295 -4.5433,3.0972 0,1.2723 2.1973,2.4833 6.1583,3.5826l65.1098 -26.4989c2.7618,-1.1944 5.9842,-1.6696 9.8636,0l65.35 26.5966c3.6894,-1.0265 5.9182,-2.2416 5.9182,-3.6803 0,-1.0677 -1.7056,-2.1456 -4.5433,-3.0972 -22.3726,-7.3556 -44.7453,-14.711 -67.1179,-22.0666 -2.9444,-1.0554 -5.9663,-1.0486 -9.0776,0z"
         :transform="`scale(${config.lb / 152}, ${config.hb / 15})`"
       />
-      
+
       <!-- Base elíptica -->
-      <ellipse 
-        fill="#999999" 
-        :cx="config.lb / 2" 
-        :cy="config.hs" 
-        :rx="config.lb / 2" 
-        :ry="config.hb" 
+      <ellipse
+        fill="#999999"
+        :cx="config.lb / 2"
+        :cy="config.hs"
+        :rx="config.lb / 2"
+        :ry="config.hb"
       />
-      <ellipse 
-        fill="#CCCCCC" 
-        :cx="config.lb / 2" 
-        :cy="config.hs - config.eb" 
-        :rx="config.lb / 2" 
-        :ry="config.hb" 
+      <ellipse
+        fill="#CCCCCC"
+        :cx="config.lb / 2"
+        :cy="config.hs - config.eb"
+        :rx="config.lb / 2"
+        :ry="config.hb"
       />
     </g>
 
@@ -61,20 +61,22 @@
           <rect
             :id="`PenduloSilo_${p}`"
             :x="calcularPosicaoXPendulo(p) - escalaSensores / 2"
-            :y="yPendulo"
+            :y="posicoesManuaisYPendulos[p] || yPendulo"
             :width="escalaSensores"
             :height="escalaSensores / 2"
             rx="2"
             ry="2"
-            fill="#3A78FD"
-            stroke="none"
-            stroke-width="0"
+            :fill="getCorPendulo(p)"
+            :stroke="getBordaCabo(p)"
+            :stroke-width="getEspessuraBordaCabo(p)"
             class="pendulo-element"
+            style="cursor: ns-resize;"
+            @mousedown="iniciarDragPendulo($event, p)"
           />
           <text
             :id="`TextoPenduloSilo_${p}`"
             :x="calcularPosicaoXPendulo(p)"
-            :y="yPendulo + escalaSensores / 4"
+            :y="(posicoesManuaisYPendulos[p] || yPendulo) + escalaSensores / 4"
             text-anchor="middle"
             dominant-baseline="central"
             font-weight="bold"
@@ -82,6 +84,7 @@
             font-family="Arial"
             fill="white"
             class="pendulo-element"
+            style="cursor: ns-resize; pointer-events: none;"
           >
             P{{ p }}
           </text>
@@ -91,7 +94,7 @@
             <rect
               :id="`SensorSilo_${p}_${s}`"
               :x="calcularPosicaoXPendulo(p) - escalaSensores / 2"
-              :y="calcularPosicaoYSensor(s)"
+              :y="calcularPosicaoYSensor(s, p)"
               :width="escalaSensores"
               :height="escalaSensores / 2"
               rx="2"
@@ -100,36 +103,56 @@
               stroke="black"
               stroke-width="1"
               class="sensor-element"
+              style="cursor: ns-resize;"
+              @mousedown="iniciarDragSensor($event, p, s)"
             />
             <text
               :id="`ValorSensorSilo_${p}_${s}`"
               :x="calcularPosicaoXPendulo(p)"
-              :y="calcularPosicaoYSensor(s) + escalaSensores / 4"
+              :y="calcularPosicaoYSensor(s, p) + escalaSensores / 4"
               text-anchor="middle"
               dominant-baseline="central"
               :font-size="escalaSensores * 0.4 - 0.5"
               font-family="Arial"
               :fill="getCorSensor(p, s) === '#ff2200' ? 'white' : 'black'"
               class="sensor-element"
+              style="pointer-events: none;"
             >
               {{ getValorSensor(p, s) }}
             </text>
             <text
               :id="`NomeSensorSilo_${p}_${s}`"
               :x="calcularPosicaoXPendulo(p) - escalaSensores / 2 - 2"
-              :y="calcularPosicaoYSensor(s) + escalaSensores / 4"
+              :y="calcularPosicaoYSensor(s, p) + escalaSensores / 4"
               text-anchor="end"
               dominant-baseline="central"
               :font-size="escalaSensores * 0.4 - 1.5"
               font-family="Arial"
               fill="black"
               class="sensor-element"
+              style="pointer-events: none;"
             >
               S{{ s }}
             </text>
           </g>
         </g>
       </g>
+    </g>
+
+    <!-- Elementos da Visão Topo (Círculos) -->
+    <g v-if="isVisaoTopoAtiva" :transform="`translate(${config.lb / 2}, ${config.hs / 2})`">
+      <circle
+        v-for="(circulo, index) in circulosTopo"
+        :key="index"
+        :cx="circulo.cx"
+        :cy="circulo.cy"
+        :r="circulo.radius"
+        :fill="circulo.fill"
+        stroke="black"
+        :stroke-width="circulo.borderWidth"
+        @mousedown="iniciarDragCirculo($event, index)"
+        @wheel.prevent="ajustarTamanhoCirculo($event, index)"
+      />
     </g>
   </svg>
 </template>
@@ -158,7 +181,13 @@ export default {
         quantidadePendulos: 5,
         sensoresPorPendulo: {
           1: 5, 2: 5, 3: 5, 4: 5, 5: 5
-        }
+        },
+        // Propriedades para a visão topo
+        circulosTopo: [
+          { cx: 0, cy: 0, radius: 20, fill: '#3A78FD', borderWidth: 1 },
+          { cx: 50, cy: 0, radius: 20, fill: '#4ECDC4', borderWidth: 1 },
+          { cx: -50, cy: 0, radius: 20, fill: '#FF6B35', borderWidth: 1 }
+        ]
       })
     },
     dadosSensores: {
@@ -171,13 +200,17 @@ export default {
     },
     opacidadesSvg: {
       type: Object,
-      default: () => ({ 
-        geral: 1, 
-        pendulos: 1, 
-        estrutura: 1 
+      default: () => ({
+        geral: 1,
+        pendulos: 1,
+        estrutura: 1
       })
     },
     isMobile: {
+      type: Boolean,
+      default: false
+    },
+    isVisaoTopoAtiva: { // Nova prop para controlar a visibilidade da visão topo
       type: Boolean,
       default: false
     }
@@ -212,6 +245,24 @@ export default {
     },
     yPendulo() {
       return this.config.hs + 25
+    },
+    circulosTopo() {
+      return this.config.circulosTopo || [];
+    }
+  },
+  data() {
+    return {
+      posicoesManuaisYPendulos: {}, // Posições Y manuais dos pêndulos
+      posicoesManuaisYSensores: {}, // Posições Y manuais dos sensores
+      isDraggingPendulo: false,
+      isDraggingSensor: false,
+      penduloArrastando: null,
+      sensorArrastando: null, // { pendulo, sensor }
+      offsetYInicial: 0,
+      // Dados para drag and drop dos círculos na visão topo
+      isDraggingCirculo: false,
+      circuloArrastandoIndex: -1,
+      offsetCirculo: { x: 0, y: 0 }
     }
   },
   methods: {
@@ -219,7 +270,7 @@ export default {
       const { lb } = this.config
       const margemLateral = 40
       const larguraUtil = lb - (2 * margemLateral)
-      
+
       if (this.quantidadePendulos === 1) {
         return lb / 2
       } else {
@@ -227,11 +278,36 @@ export default {
         return margemLateral + ((numeroPendulo - 1) * espacamento)
       }
     },
-    calcularPosicaoYSensor(numeroSensor) {
-      return this.yPendulo - this.distYSensores * numeroSensor - 25
+    calcularPosicaoYSensor(numeroSensor, pendulo) {
+      const yPenduloBase = this.posicoesManuaisYPendulos[pendulo] || this.yPendulo;
+      const chaveSensor = `${pendulo}-${numeroSensor}`;
+      const offsetManual = this.posicoesManuaisYSensores[chaveSensor] || 0;
+      return yPenduloBase - this.distYSensores * numeroSensor - 25 + offsetManual;
     },
     getSensoresPorPendulo(numeroPendulo) {
       return this.config.sensoresPorPendulo[numeroPendulo] || 5
+    },
+    getCorPendulo(numeroPendulo) {
+      const tipoPosicao = this.config.tipoPosicaoPendulo?.[numeroPendulo] || 'central'
+
+      switch (tipoPosicao) {
+        case 'lateral':
+          return '#FF6B35'
+        case 'central':
+          return '#3A78FD'
+        case 'intermediario':
+          return '#4ECDC4'
+        default:
+          return '#3A78FD'
+      }
+    },
+    getBordaCabo(numeroPendulo) {
+      const tipoCabo = this.config.tipoCaboPendulo?.[numeroPendulo] || 'digital'
+
+      return tipoCabo === 'analogico' ? '#FFD93D' : '#6C63FF'
+    },
+    getEspessuraBordaCabo(numeroPendulo) {
+      return 3
     },
     getCorSensor(pendulo, sensor) {
       if (this.dadosSensores?.leitura?.[pendulo]?.[sensor]) {
@@ -277,7 +353,7 @@ export default {
 
       const dBlade = "M87.8719 24.0211c0,0.1159 -0.0131,0.2287 -0.0378,0.3371 2.7914,0.5199 5.9807,0.6695 6.4392,2.7909 0.0127,1.1871 -0.2692,1.9342 -1.3353,3.2209 -1.8235,-3.4167 -3.7636,-4.2185 -5.4164,-5.3813 -0.1853,0.2222 -0.4331,0.3904 -0.7164,0.4775 0.9454,2.6773 2.4105,5.5142 0.8026,6.9719 -1.0217,0.6046 -1.8096,0.734 -3.4571,0.454 2.0472,-3.2874 1.7716,-5.3685 1.9521,-7.3812 -0.2952,-0.0506 -0.5611,-0.1869 -0.7713,-0.3822 -1.846,2.1575 -3.5703,4.8451 -5.6368,4.1814 -1.0345,-0.5825 -1.5405,-1.2002 -2.1218,-2.7669 3.8705,0.1292 5.535,-1.15 7.3682,-2 0.0599,-0.1627 0.0927,-0.3386 0.0927,-0.5221z"
       const angles = [0, 60, 120, 180, 240, 300]
-      
+
       const aeradorEscala = this.config.aerador_escala || 1
       const aeradorRotacao = this.config.aerador_rotacao || 0
 
@@ -289,7 +365,7 @@ export default {
         else if (id === 4) transform = `translate(${posX}, ${posY - 35 - da})`
         else if (id === 5) transform = `translate(-73, ${posY - 70 - da * 2})`
         else if (id === 6) transform = `translate(${posX}, ${posY - 70 - da * 2})`
-        
+
         const centerX = 70 + 12.5 + 3.5
         const centerY = 24
         const transformCompleto = `${transform} rotate(${aeradorRotacao} ${centerX} ${centerY}) scale(${aeradorEscala} ${aeradorEscala})`
@@ -309,7 +385,168 @@ export default {
       }
 
       return aeradores
+    },
+    // Métodos para drag and drop dos pêndulos (vertical)
+    iniciarDragPendulo(event, penduloId) {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      this.isDraggingPendulo = true;
+      this.penduloArrastando = penduloId;
+      
+      const rectSVG = this.$el.getBoundingClientRect();
+      const posicaoAtual = this.posicoesManuaisYPendulos[penduloId] || this.yPendulo;
+      this.offsetYInicial = event.clientY - rectSVG.top - posicaoAtual;
+      
+      document.body.style.cursor = 'ns-resize';
+    },
+    handleDragPendulo(event) {
+      if (!this.isDraggingPendulo) return;
+
+      const rectSVG = this.$el.getBoundingClientRect();
+      const mouseY = event.clientY - rectSVG.top;
+      const novaPosicaoY = mouseY - this.offsetYInicial;
+
+      // Limitar movimento vertical dentro do SVG
+      const limiteSuperior = 20; // Margem superior
+      const limiteInferior = this.alturaSVG - 40; // Margem inferior
+
+      const posicaoYFinal = Math.max(limiteSuperior, Math.min(novaPosicaoY, limiteInferior));
+
+      this.$set(this.posicoesManuaisYPendulos, this.penduloArrastando, posicaoYFinal);
+    },
+    pararDragPendulo() {
+      if (this.isDraggingPendulo) {
+        this.isDraggingPendulo = false;
+        this.penduloArrastando = null;
+        document.body.style.cursor = 'default';
+        
+        // Emitir evento de atualização de posições
+        this.$emit('posicoes-atualizadas', {
+          tipo: 'lateral',
+          pendulos: { ...this.posicoesManuaisYPendulos },
+          sensores: { ...this.posicoesManuaisYSensores }
+        });
+      }
+    },
+    
+    // Métodos para drag and drop dos sensores individuais (vertical)
+    iniciarDragSensor(event, penduloId, sensorId) {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      this.isDraggingSensor = true;
+      this.sensorArrastando = { pendulo: penduloId, sensor: sensorId };
+      
+      const rectSVG = this.$el.getBoundingClientRect();
+      const chaveSensor = `${penduloId}-${sensorId}`;
+      const offsetAtual = this.posicoesManuaisYSensores[chaveSensor] || 0;
+      const posicaoCalculada = this.calcularPosicaoYSensor(sensorId, penduloId);
+      
+      this.offsetYInicial = event.clientY - rectSVG.top - posicaoCalculada;
+      
+      document.body.style.cursor = 'ns-resize';
+    },
+    handleDragSensor(event) {
+      if (!this.isDraggingSensor) return;
+
+      const { pendulo, sensor } = this.sensorArrastando;
+      const chaveSensor = `${pendulo}-${sensor}`;
+      
+      const rectSVG = this.$el.getBoundingClientRect();
+      const mouseY = event.clientY - rectSVG.top;
+      
+      // Calcular posição base do sensor (sem offset manual)
+      const yPenduloBase = this.posicoesManuaisYPendulos[pendulo] || this.yPendulo;
+      const posicaoBaseY = yPenduloBase - this.distYSensores * sensor - 25;
+      
+      // Calcular novo offset baseado na diferença
+      const novaPosicaoY = mouseY - this.offsetYInicial;
+      const novoOffset = novaPosicaoY - posicaoBaseY;
+      
+      // Limitar o offset para evitar que o sensor saia muito da posição
+      const offsetLimitado = Math.max(-100, Math.min(100, novoOffset));
+      
+      this.$set(this.posicoesManuaisYSensores, chaveSensor, offsetLimitado);
+    },
+    pararDragSensor() {
+      if (this.isDraggingSensor) {
+        this.isDraggingSensor = false;
+        this.sensorArrastando = null;
+        document.body.style.cursor = 'default';
+        
+        // Emitir evento de atualização de posições
+        this.$emit('posicoes-atualizadas', {
+          tipo: 'lateral',
+          pendulos: { ...this.posicoesManuaisYPendulos },
+          sensores: { ...this.posicoesManuaisYSensores }
+        });
+      }
+    },
+    // Métodos para drag and drop dos círculos na visão topo
+    iniciarDragCirculo(event, index) {
+      this.isDraggingCirculo = true;
+      this.circuloArrastandoIndex = index;
+      const rect = event.target.getBoundingClientRect();
+      const svgRect = this.$el.getBoundingClientRect();
+      this.offsetCirculo = {
+        x: event.clientX - svgRect.left - this.circulosTopo[index].cx,
+        y: event.clientY - svgRect.top - this.circulosTopo[index].cy
+      };
+      document.body.style.cursor = 'grabbing';
+    },
+    handleDragCirculo(event) {
+      if (!this.isDraggingCirculo) return;
+
+      const svgRect = this.$el.getBoundingClientRect();
+      const newCx = event.clientX - svgRect.left - this.offsetCirculo.x;
+      const newCy = event.clientY - svgRect.top - this.offsetCirculo.y;
+
+      // Aplicar limites para manter dentro do SVG (opcional, mas recomendado)
+      const circulo = this.circulosTopo[this.circuloArrastandoIndex];
+      const halfRadius = circulo.radius;
+      const limitedCx = Math.max(halfRadius, Math.min(newCx, this.larguraSVG - halfRadius));
+      const limitedCy = Math.max(halfRadius, Math.min(newCy, this.alturaSVG - halfRadius));
+
+      this.circulosTopo[this.circuloArrastandoIndex].cx = limitedCx;
+      this.circulosTopo[this.circuloArrastandoIndex].cy = limitedCy;
+    },
+    pararDragCirculo() {
+      if (this.isDraggingCirculo) {
+        this.isDraggingCirculo = false;
+        this.circuloArrastandoIndex = -1;
+        document.body.style.cursor = 'default';
+      }
+    },
+    // Método para ajustar o tamanho dos círculos
+    ajustarTamanhoCirculo(event, index) {
+      const delta = event.deltaY > 0 ? -1 : 1; // -1 para diminuir, 1 para aumentar
+      const novoRaio = this.circulosTopo[index].radius + delta * 2; // Ajuste o valor de '2' para sensibilidade
+
+      // Limitar o tamanho mínimo e máximo (opcional)
+      const minRadius = 5;
+      const maxRadius = 50;
+      this.circulosTopo[index].radius = Math.max(minRadius, Math.min(novoRaio, maxRadius));
+
+      // Atualizar a largura da borda proporcionalmente (opcional)
+      this.circulosTopo[index].borderWidth = this.circulosTopo[index].radius * 0.05; // Exemplo: 5% do raio
     }
+  },
+  mounted() {
+    document.addEventListener('mousemove', this.handleDragPendulo);
+    document.addEventListener('mouseup', this.pararDragPendulo);
+    document.addEventListener('mousemove', this.handleDragSensor);
+    document.addEventListener('mouseup', this.pararDragSensor);
+    document.addEventListener('mousemove', this.handleDragCirculo);
+    document.addEventListener('mouseup', this.pararDragCirculo);
+  },
+  beforeDestroy() {
+    document.removeEventListener('mousemove', this.handleDragPendulo);
+    document.removeEventListener('mouseup', this.pararDragPendulo);
+    document.removeEventListener('mousemove', this.handleDragSensor);
+    document.removeEventListener('mouseup', this.pararDragSensor);
+    document.removeEventListener('mousemove', this.handleDragCirculo);
+    document.removeEventListener('mouseup', this.pararDragCirculo);
   }
 }
 </script>
@@ -317,5 +554,11 @@ export default {
 <style scoped>
 .sensor-element, .pendulo-element {
   transition: all 0.15s ease-out;
+}
+.circulo-elemento {
+  cursor: grab;
+}
+.circulo-elemento:active {
+  cursor: grabbing;
 }
 </style>

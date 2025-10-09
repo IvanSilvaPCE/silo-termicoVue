@@ -67,51 +67,83 @@
 
               <!-- Controles por Pêndulo -->
               <div class="mb-3">
-                <label class="form-label small fw-bold mb-2">Sensores por Pêndulo:</label>
+                <label class="form-label small fw-bold mb-2">Configuração dos Pêndulos:</label>
                 <div class="row g-2">
                   <div 
                     v-for="numeroPendulo in configSilo.quantidadePendulos" 
                     :key="numeroPendulo"
                     class="col-12"
                   >
-                    <div class="d-flex align-items-center justify-content-between p-2 border rounded" 
-                         style="background-color: #f8f9fa;">
-                      <div class="flex-grow-1">
-                        <strong class="small">Pêndulo {{ numeroPendulo }}</strong>
-                        <div class="text-muted" style="font-size: 0.75rem;">
-                          {{ configSilo.sensoresPorPendulo[numeroPendulo] || 5 }} sensor{{ (configSilo.sensoresPorPendulo[numeroPendulo] || 5) > 1 ? 'es' : '' }}
+                    <div class="p-2 border rounded" style="background-color: #f8f9fa;">
+                      <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="flex-grow-1">
+                          <strong class="small">Pêndulo {{ numeroPendulo }}</strong>
+                          <div class="text-muted" style="font-size: 0.75rem;">
+                            {{ configSilo.sensoresPorPendulo[numeroPendulo] || 5 }} sensor{{ (configSilo.sensoresPorPendulo[numeroPendulo] || 5) > 1 ? 'es' : '' }}
+                          </div>
+                        </div>
+                        
+                        <div class="input-group input-group-sm" style="max-width: 120px;">
+                          <button 
+                            type="button" 
+                            class="btn btn-outline-secondary btn-sm"
+                            @click="alterarSensoresSilo(numeroPendulo, -1)"
+                            :disabled="(configSilo.sensoresPorPendulo[numeroPendulo] || 5) <= 1"
+                            title="Diminuir sensores"
+                          >
+                            -
+                          </button>
+                          
+                          <input 
+                            type="number" 
+                            class="form-control form-control-sm text-center"
+                            :value="configSilo.sensoresPorPendulo[numeroPendulo] || 5"
+                            @change="setSensoresPenduloSilo(numeroPendulo, $event.target.value)"
+                            min="1" 
+                            max="20"
+                          />
+                          
+                          <button 
+                            type="button" 
+                            class="btn btn-outline-secondary btn-sm"
+                            @click="alterarSensoresSilo(numeroPendulo, 1)"
+                            :disabled="(configSilo.sensoresPorPendulo[numeroPendulo] || 5) >= 20"
+                            title="Aumentar sensores"
+                          >
+                            +
+                          </button>
                         </div>
                       </div>
-                      
-                      <div class="input-group input-group-sm" style="max-width: 120px;">
-                        <button 
-                          type="button" 
-                          class="btn btn-outline-secondary btn-sm"
-                          @click="alterarSensoresSilo(numeroPendulo, -1)"
-                          :disabled="(configSilo.sensoresPorPendulo[numeroPendulo] || 5) <= 1"
-                          title="Diminuir sensores"
-                        >
-                          -
-                        </button>
-                        
-                        <input 
-                          type="number" 
-                          class="form-control form-control-sm text-center"
-                          :value="configSilo.sensoresPorPendulo[numeroPendulo] || 5"
-                          @change="setSensoresPenduloSilo(numeroPendulo, $event.target.value)"
-                          min="1" 
-                          max="20"
-                        />
-                        
-                        <button 
-                          type="button" 
-                          class="btn btn-outline-secondary btn-sm"
-                          @click="alterarSensoresSilo(numeroPendulo, 1)"
-                          :disabled="(configSilo.sensoresPorPendulo[numeroPendulo] || 5) >= 20"
-                          title="Aumentar sensores"
-                        >
-                          +
-                        </button>
+
+                      <!-- Tipo de Posição -->
+                      <div class="row g-2 mt-1">
+                        <div class="col-6">
+                          <label class="form-label small mb-1" style="font-size: 0.7rem;">Posição:</label>
+                          <select 
+                            v-model="configSilo.tipoPosicaoPendulo[numeroPendulo]"
+                            @change="onTipoPosicaoPenduloChange(numeroPendulo)"
+                            class="form-select form-select-sm"
+                            style="font-size: 0.75rem;"
+                          >
+                            <option value="lateral">Lateral</option>
+                            <option value="central">Central</option>
+                            <option value="intermediario">Intermediário</option>
+                          </select>
+                        </div>
+
+                        <!-- Tipo de Cabo -->
+                        <div class="col-6">
+                          <label class="form-label small mb-1" style="font-size: 0.7rem;">Cabo:</label>
+                          <select 
+                            v-model="configSilo.tipoCaboPendulo[numeroPendulo]"
+                            @change="onTipoCaboPenduloChange(numeroPendulo)"
+                            class="form-select form-select-sm"
+                            style="font-size: 0.75rem;"
+                          >
+                            <option value="analogico">Analógico</option>
+                            <option value="digital">Digital</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -207,34 +239,188 @@
                 <small class="text-muted">Rotaciona apenas o fundo, mantendo os pêndulos fixos</small>
               </div>
 
-              <!-- Afastamento dos Pêndulos -->
+              <!-- Rotação Global dos Pêndulos -->
               <div class="mb-3">
                 <label class="form-label small fw-bold">
-                  <i class="fa fa-arrows-h me-1"></i>Afastamento dos Pêndulos:
+                  <i class="fa fa-sync me-1"></i>Rotação dos Pêndulos:
                 </label>
                 <div class="d-flex align-items-center gap-2">
                   <input 
                     type="range" 
                     class="form-range flex-grow-1" 
-                    min="0.5" 
-                    max="1.5" 
-                    step="0.05"
-                    v-model="configSilo.afastamentoPendulos"
-                    @input="onAfastamentoPendulosChange"
+                    min="0" 
+                    max="360" 
+                    step="1"
+                    v-model="configSilo.rotacaoPendulos"
+                    @input="onRotacaoPendulosChange"
                   />
                   <input 
                     type="number" 
                     class="form-control form-control-sm text-center" 
                     style="width: 80px;"
-                    min="0.5" 
-                    max="1.5"
-                    step="0.05"
-                    v-model="configSilo.afastamentoPendulos"
-                    @change="onAfastamentoPendulosChange"
+                    min="0" 
+                    max="360"
+                    v-model="configSilo.rotacaoPendulos"
+                    @change="onRotacaoPendulosChange"
                   />
-                  <span class="small">x</span>
+                  <span class="small">°</span>
                 </div>
-                <small class="text-muted">Aproxima (0.5) ou afasta (1.5) os pêndulos do centro</small>
+                <small class="text-muted">Rotaciona todos os pêndulos (independente do fundo)</small>
+              </div>
+
+              <!-- Afastamento por Camada -->
+              <div class="mb-3">
+                <label class="form-label small fw-bold">
+                  <i class="fa fa-arrows-h me-1"></i>Afastamento por Camada:
+                </label>
+                
+                <!-- Lateral -->
+                <div class="mb-2">
+                  <label class="small mb-1" style="color: #FF6B35; font-weight: 600;">
+                    <i class="fa fa-circle me-1"></i>Lateral:
+                  </label>
+                  <div class="d-flex align-items-center gap-2">
+                    <input 
+                      type="range" 
+                      class="form-range flex-grow-1" 
+                      min="0.3" 
+                      max="1.5" 
+                      step="0.05"
+                      v-model="configSilo.afastamentoLateral"
+                      @input="onAfastamentoCamadaChange"
+                    />
+                    <input 
+                      type="number" 
+                      class="form-control form-control-sm text-center" 
+                      style="width: 70px;"
+                      min="0.3" 
+                      max="1.5"
+                      step="0.05"
+                      v-model="configSilo.afastamentoLateral"
+                      @change="onAfastamentoCamadaChange"
+                    />
+                    <span class="small">x</span>
+                  </div>
+                </div>
+
+                <!-- Central -->
+                <div class="mb-2">
+                  <label class="small mb-1" style="color: #3A78FD; font-weight: 600;">
+                    <i class="fa fa-circle me-1"></i>Central:
+                  </label>
+                  <div class="d-flex align-items-center gap-2">
+                    <input 
+                      type="range" 
+                      class="form-range flex-grow-1" 
+                      min="0.3" 
+                      max="1.5" 
+                      step="0.05"
+                      v-model="configSilo.afastamentoCentral"
+                      @input="onAfastamentoCamadaChange"
+                    />
+                    <input 
+                      type="number" 
+                      class="form-control form-control-sm text-center" 
+                      style="width: 70px;"
+                      min="0.3" 
+                      max="1.5"
+                      step="0.05"
+                      v-model="configSilo.afastamentoCentral"
+                      @change="onAfastamentoCamadaChange"
+                    />
+                    <span class="small">x</span>
+                  </div>
+                </div>
+
+                <!-- Intermediário -->
+                <div class="mb-2">
+                  <label class="small mb-1" style="color: #4ECDC4; font-weight: 600;">
+                    <i class="fa fa-circle me-1"></i>Intermediário:
+                  </label>
+                  <div class="d-flex align-items-center gap-2">
+                    <input 
+                      type="range" 
+                      class="form-range flex-grow-1" 
+                      min="0.3" 
+                      max="1.5" 
+                      step="0.05"
+                      v-model="configSilo.afastamentoIntermediario"
+                      @input="onAfastamentoCamadaChange"
+                    />
+                    <input 
+                      type="number" 
+                      class="form-control form-control-sm text-center" 
+                      style="width: 70px;"
+                      min="0.3" 
+                      max="1.5"
+                      step="0.05"
+                      v-model="configSilo.afastamentoIntermediario"
+                      @change="onAfastamentoCamadaChange"
+                    />
+                    <span class="small">x</span>
+                  </div>
+                </div>
+                
+                <small class="text-muted">Ajuste a distância de cada camada do centro</small>
+              </div>
+
+              <!-- Tamanho dos Círculos -->
+              <div class="mb-3">
+                <label class="form-label small fw-bold">
+                  <i class="fa fa-circle-o me-1"></i>Tamanho dos Círculos:
+                </label>
+                <div class="d-flex align-items-center gap-2">
+                  <input 
+                    type="range" 
+                    class="form-range flex-grow-1" 
+                    min="3" 
+                    max="15" 
+                    step="0.5"
+                    v-model="configSilo.tamanhoCirculoPendulo"
+                    @input="onTamanhoCirculoChange"
+                  />
+                  <input 
+                    type="number" 
+                    class="form-control form-control-sm text-center" 
+                    style="width: 70px;"
+                    min="3" 
+                    max="15"
+                    step="0.5"
+                    v-model="configSilo.tamanhoCirculoPendulo"
+                    @change="onTamanhoCirculoChange"
+                  />
+                </div>
+                <small class="text-muted">Ajuste o raio dos círculos dos pêndulos</small>
+              </div>
+
+              <!-- Espessura da Borda -->
+              <div class="mb-3">
+                <label class="form-label small fw-bold">
+                  <i class="fa fa-square-o me-1"></i>Espessura da Borda:
+                </label>
+                <div class="d-flex align-items-center gap-2">
+                  <input 
+                    type="range" 
+                    class="form-range flex-grow-1" 
+                    min="0" 
+                    max="5" 
+                    step="0.5"
+                    v-model="configSilo.espessuraBordaCirculo"
+                    @input="onEspessuraBordaCirculoChange"
+                  />
+                  <input 
+                    type="number" 
+                    class="form-control form-control-sm text-center" 
+                    style="width: 70px;"
+                    min="0" 
+                    max="5"
+                    step="0.5"
+                    v-model="configSilo.espessuraBordaCirculo"
+                    @change="onEspessuraBordaCirculoChange"
+                  />
+                  <span class="small">px</span>
+                </div>
+                <small class="text-muted">Ajuste a espessura da borda dos círculos</small>
               </div>
 
               <!-- Informação sobre movimentação manual -->
@@ -933,9 +1119,21 @@ function getDefaultSiloConfig() {
     sensoresPorPendulo: {
       1: 5, 2: 5, 3: 5, 4: 5, 5: 5
     },
+    tipoPosicaoPendulo: {
+      1: 'central', 2: 'central', 3: 'central', 4: 'central', 5: 'central'
+    },
+    tipoCaboPendulo: {
+      1: 'digital', 2: 'digital', 3: 'digital', 4: 'digital', 5: 'digital'
+    },
     // Controles do Topo
     rotacaoFundo: 0,          // Rotação do fundo em graus (0-360)
-    afastamentoPendulos: 1.0  // Multiplicador do afastamento dos pêndulos (0.5-1.5)
+    rotacaoPendulos: 0,       // Rotação global dos pêndulos (0-360)
+    afastamentoPendulos: 1.0, // Multiplicador do afastamento dos pêndulos (0.5-1.5) - legado
+    afastamentoLateral: 1.0,  // Afastamento da camada lateral (0.3-1.5)
+    afastamentoCentral: 1.0,  // Afastamento da camada central (0.3-1.5)
+    afastamentoIntermediario: 1.0,  // Afastamento da camada intermediária (0.3-1.5)
+    tamanhoCirculoPendulo: 5.7138, // Tamanho do raio dos círculos dos pêndulos (3-15)
+    espessuraBordaCirculo: 1.5 // Espessura da borda dos círculos (0-5)
   }
 }
 
@@ -2962,6 +3160,33 @@ export default {
       // Usar $set para garantir reatividade completa do objeto
       this.$set(this.configSilo, 'sensoresPorPendulo', sensoresPorPendulo)
       
+      // Inicializar tipoPosicaoPendulo para novos pêndulos
+      const tipoPosicaoExistente = this.configSilo.tipoPosicaoPendulo || {}
+      const tipoPosicaoPendulo = {}
+      
+      for (let i = 1; i <= novaQuantidade; i++) {
+        if (tipoPosicaoExistente[i] !== undefined) {
+          tipoPosicaoPendulo[i] = tipoPosicaoExistente[i]
+        } else {
+          tipoPosicaoPendulo[i] = 'central'
+        }
+      }
+      
+      this.$set(this.configSilo, 'tipoPosicaoPendulo', tipoPosicaoPendulo)
+      
+      // Inicializar tipoCaboPendulo para novos pêndulos
+      const tipoCaboExistente = this.configSilo.tipoCaboPendulo || {}
+      const tipoCaboPendulo = {}
+      
+      for (let i = 1; i <= novaQuantidade; i++) {
+        if (tipoCaboExistente[i] !== undefined) {
+          tipoCaboPendulo[i] = tipoCaboExistente[i]
+        } else {
+          tipoCaboPendulo[i] = 'digital'
+        }
+      }
+      
+      this.$set(this.configSilo, 'tipoCaboPendulo', tipoCaboPendulo)
       
       // Criar dados exemplares para visualização
       this.criarDadosExemplaresSilo()
@@ -2995,6 +3220,26 @@ export default {
         // Criar dados exemplares para visualização
         this.criarDadosExemplaresSilo()
       }
+    },
+
+    onTipoPosicaoPenduloChange(numeroPendulo) {
+      if (!this.configSilo.tipoPosicaoPendulo) {
+        this.$set(this.configSilo, 'tipoPosicaoPendulo', {})
+      }
+      
+      // Atualizar visualização
+      this.criarDadosExemplaresSilo()
+      this.updateSVG()
+    },
+
+    onTipoCaboPenduloChange(numeroPendulo) {
+      if (!this.configSilo.tipoCaboPendulo) {
+        this.$set(this.configSilo, 'tipoCaboPendulo', {})
+      }
+      
+      // Atualizar visualização
+      this.criarDadosExemplaresSilo()
+      this.updateSVG()
     },
 
     aplicarSensoresUniformesSilo() {
@@ -3058,12 +3303,75 @@ export default {
       this.updateSVG()
     },
 
+    onRotacaoPendulosChange() {
+      // Garantir que o valor esteja entre 0 e 360
+      const rotacao = parseFloat(this.configSilo.rotacaoPendulos)
+      if (!isNaN(rotacao)) {
+        this.configSilo.rotacaoPendulos = ((rotacao % 360) + 360) % 360
+      }
+      // Forçar atualização do SVG
+      this.updateSVG()
+    },
+
+    onTamanhoCirculoChange() {
+      // Garantir que o valor esteja entre 3 e 15
+      const tamanho = parseFloat(this.configSilo.tamanhoCirculoPendulo)
+      if (!isNaN(tamanho)) {
+        this.configSilo.tamanhoCirculoPendulo = Math.max(3, Math.min(15, tamanho))
+      }
+      // Forçar atualização do SVG
+      this.updateSVG()
+    },
+
+    onEspessuraBordaCirculoChange() {
+      // Garantir que o valor esteja entre 0 e 5
+      const espessura = parseFloat(this.configSilo.espessuraBordaCirculo)
+      if (!isNaN(espessura)) {
+        this.configSilo.espessuraBordaCirculo = Math.max(0, Math.min(5, espessura))
+      }
+      // Forçar atualização do SVG
+      this.updateSVG()
+    },
+
+    onAfastamentoCamadaChange() {
+      // Garantir que os valores estejam entre 0.3 e 1.5
+      const lateral = parseFloat(this.configSilo.afastamentoLateral)
+      if (!isNaN(lateral)) {
+        this.configSilo.afastamentoLateral = Math.max(0.3, Math.min(1.5, lateral))
+      }
+      
+      const central = parseFloat(this.configSilo.afastamentoCentral)
+      if (!isNaN(central)) {
+        this.configSilo.afastamentoCentral = Math.max(0.3, Math.min(1.5, central))
+      }
+      
+      const intermediario = parseFloat(this.configSilo.afastamentoIntermediario)
+      if (!isNaN(intermediario)) {
+        this.configSilo.afastamentoIntermediario = Math.max(0.3, Math.min(1.5, intermediario))
+      }
+      
+      // Forçar atualização do SVG
+      this.updateSVG()
+    },
+
     resetarControlesTopo() {
       // Resetar rotação do fundo para 0
       this.$set(this.configSilo, 'rotacaoFundo', 0)
       
-      // Resetar afastamento dos pêndulos para 1.0
+      // Resetar rotação dos pêndulos para 0
+      this.$set(this.configSilo, 'rotacaoPendulos', 0)
+      
+      // Resetar afastamento dos pêndulos para 1.0 (legado)
       this.$set(this.configSilo, 'afastamentoPendulos', 1.0)
+      
+      // Resetar afastamento por camada para 1.0
+      this.$set(this.configSilo, 'afastamentoLateral', 1.0)
+      this.$set(this.configSilo, 'afastamentoCentral', 1.0)
+      this.$set(this.configSilo, 'afastamentoIntermediario', 1.0)
+      
+      // Resetar tamanho e borda dos círculos
+      this.$set(this.configSilo, 'tamanhoCirculoPendulo', 5.7138)
+      this.$set(this.configSilo, 'espessuraBordaCirculo', 1.5)
       
       // Limpar posições manuais dos pêndulos
       this.posicoesManualPendulos = {}
