@@ -346,6 +346,47 @@ export default {
       else return "#ff2200"
     },
     renderAeradoresSilo() {
+      // Nova lógica: usar lados definidos se existirem
+      const ladosDef = this.config.aeradores_lados || { esquerda: [], direita: [] }
+      const totalLados = (ladosDef.esquerda?.length || 0) + (ladosDef.direita?.length || 0)
+      if (totalLados > 0) {
+        const { ds, dy, da, lb, hs } = this.config
+        const posYBase = hs + dy - 30
+        const posXDir = lb + ds * 2 - 31
+        const posXEsq = -73
+        let aeradores = ''
+
+        const dBlade2 = "M87.8719 24.0211c0,0.1159 -0.0131,0.2287 -0.0378,0.3371 2.7914,0.5199 5.9807,0.6695 6.4392,2.7909 0.0127,1.1871 -0.2692,1.9342 -1.3353,3.2209 -1.8235,-3.4167 -3.7636,-4.2185 -5.4164,-5.3813 -0.1853,0.2222 -0.4331,0.3904 -0.7164,0.4775 0.9454,2.6773 2.4105,5.5142 0.8026,6.9719 -1.0217,0.6046 -1.8096,0.734 -3.4571,0.454 2.0472,-3.2874 1.7716,-5.3685 1.9521,-7.3812 -0.2952,-0.0506 -0.5611,-0.1869 -0.7713,-0.3822 -1.846,2.1575 -3.5703,4.8451 -5.6368,4.1814 -1.0345,-0.5825 -1.5405,-1.2002 -2.1218,-2.7669 3.8705,0.1292 5.535,-1.15 7.3682,-2 0.0599,-0.1627 0.0927,-0.3386 0.0927,-0.5221z"
+        const angles2 = [0, 60, 120, 180, 240, 300]
+        const aeradorEscala2 = this.config.aerador_escala || 1
+        const aeradorRotacao2 = this.config.aerador_rotacao || 0
+
+        const renderGrupo2 = (ids, xBase) => {
+          ids.forEach((id, idx) => {
+            const y = posYBase - idx * (35 + da)
+            const transform = `translate(${xBase}, ${y})`
+            const centerX = 70 + 12.5 + 3.5
+            const centerY = 24
+            const transformCompleto = `${transform} rotate(${aeradorRotacao2} ${centerX} ${centerY}) scale(${aeradorEscala2} ${aeradorEscala2})`
+            aeradores += `
+              <g transform="${transformCompleto}">
+                <circle cx="${centerX}" cy="${centerY}" r="10" fill="#c5c5c5" />
+                <rect x="${70 + 3.5}" y="2" width="25" height="10" rx="6.4" ry="5" fill="#3A78FD" />
+                <text x="${centerX}" y="7" text-anchor="middle" dominant-baseline="central" font-weight="bold" font-size="6.5" font-family="Arial" fill="white">AE-${id}</text>
+                <g>
+                  ${angles2.map(angle =>
+                    `<path d="${dBlade2}" fill="white" ${angle === 0 ? '' : `transform=\"rotate(${angle},${centerX},${centerY})\"`} />`
+                  ).join('')}
+                </g>
+              </g>
+            `
+          })
+        }
+
+        renderGrupo2(ladosDef.esquerda || [], posXEsq)
+        renderGrupo2(ladosDef.direita || [], posXDir)
+        return aeradores
+      }
       const { na, ds, dy, da, lb, hs } = this.config
       const posY = hs + dy - 30
       const posX = lb + ds * 2 - 31

@@ -174,29 +174,88 @@
     </div>
 
     <template v-if="configSilo.aeradores_ativo">
+      <!-- Quantidade de Aeradores (mínimo 4) -->
       <div class="mb-3">
         <label class="form-label small fw-bold">
-          <i class="fa fa-sort-numeric-asc me-1"></i>Número de Aeradores:
+          <i class="fa fa-sort-numeric-asc me-1"></i>Quantidade de Aeradores (mín. 4)
         </label>
         <div class="d-flex align-items-center gap-2">
-          <input 
-            type="range" 
-            class="form-range flex-grow-1" 
-            min="1" 
-            max="8"
+          <button type="button" class="btn btn-outline-secondary btn-sm" @click="ajustarQuantidade(-1)">
+            -
+          </button>
+          <input
+            type="number"
+            class="form-control form-control-sm text-center"
+            style="width: 90px;"
+            :min="4"
+            :max="24"
             v-model.number="configSilo.na"
-            @input="$emit('silo-change')"
+            @change="onNaInputChange"
           />
-          <input 
-            type="number" 
-            class="form-control form-control-sm text-center" 
-            style="width: 80px;"
-            min="1" 
-            max="8"
-            v-model.number="configSilo.na"
-            @change="$emit('silo-change')"
-          />
+          <button type="button" class="btn btn-outline-secondary btn-sm" @click="ajustarQuantidade(1)">
+            +
+          </button>
         </div>
+      </div>
+
+      <!-- Distribuição dos Aeradores: Esquerda x Direita -->
+      <div class="mb-3">
+        <label class="form-label small fw-bold">
+          <i class="fa fa-exchange me-1"></i>Distribuição dos Aeradores (arraste para os lados)
+        </label>
+        <div class="row g-2">
+          <div class="col-6">
+            <div class="border rounded p-2" style="min-height: 120px; background:#f9fafb;">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <strong class="small">Esquerda</strong>
+                <small class="text-muted">{{ lados.esquerda.length }}</small>
+              </div>
+              <div 
+                class="d-flex flex-wrap gap-2"
+                @dragover.prevent
+                @drop="onDrop('esquerda')"
+                data-dropzone="esquerda"
+              >
+                <span
+                  v-for="id in lados.esquerda"
+                  :key="`ae_esq_${id}`"
+                  class="badge bg-primary"
+                  draggable="true"
+                  @dragstart="onDragStart(id, 'esquerda')"
+                >
+                  AE-{{ id }}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="border rounded p-2" style="min-height: 120px; background:#f9fafb;">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <strong class="small">Direita</strong>
+                <small class="text-muted">{{ lados.direita.length }}</small>
+              </div>
+              <div 
+                class="d-flex flex-wrap gap-2"
+                @dragover.prevent
+                @drop="onDrop('direita')"
+                data-dropzone="direita"
+              >
+                <span
+                  v-for="id in lados.direita"
+                  :key="`ae_dir_${id}`"
+                  class="badge bg-primary"
+                  draggable="true"
+                  @dragstart="onDragStart(id, 'direita')"
+                >
+                  AE-{{ id }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <small class="text-muted d-block mt-2">
+          Dica: arraste AE-1, AE-2, ... para o lado desejado. A ordem é livre; apenas o lado importa.
+        </small>
       </div>
 
       <div class="mb-3">
@@ -344,5 +403,112 @@ export default {
     }
   },
   emits: ['silo-change', 'reset-field']
+  ,
+  data() {
+    return {
+      drag: { id: null, origem: null }
+    }
+  },
+  computed: {
+    lados() {
+      // Garante estrutura reativa e padrão
+      if (!this.configSilo.aeradores_lados) {
+        this.$set(this.configSilo, 'aeradores_lados', { esquerda: [], direita: [] })
+      }
+      return this.configSilo.aeradores_lados
+    }
+  },
+  mounted() {
+    // Inicializa listas se estiverem vazias.
+    this.initLadosIfNeeded()
+  },
+  watch: {
+    'configSilo.aeradores_ativo'(val) {
+      if (val) this.initLadosIfNeeded()
+    }
+  },
+  methods: {
+    initLadosIfNeeded() {
+      const lados = this.lados
+      if ((lados.esquerda?.length || 0) + (lados.direita?.length || 0) === 0) {
+        // Distribui automaticamente 1..na alternando entre os lados
+        const total = Number(this.configSilo.na || 4)
+        const esquerda = []
+        const direita = []
+        for (let i = 1; i <= total; i++) {
+          if (i % 2 === 1) esquerda.push(i)
+          else direita.push(i)
+        }
+        this.$set(this.configSilo, 'aeradores_lados', { esquerda, direita })
+        this.$emit('silo-change')
+      }
+    },
+    ajustarQuantidade(delta) {
+      const atual = Number(this.configSilo.na || 0)
+      let novo = atual + delta
+      if (isNaN(novo)) novo = 4
+      if (novo < 4) novo = 4
+      if (novo > 24) novo = 24
+      this.configSilo.na = novo
+      this.sincronizarListasComNA()
+    },
+    onNaInputChange() {
+      let valor = Number(this.configSilo.na || 0)
+      if (isNaN(valor) || valor < 4) valor = 4
+      if (valor > 24) valor = 24
+      this.configSilo.na = valor
+      this.sincronizarListasComNA()
+    },
+    sincronizarListasComNA() {
+      // Garante que as listas reflitam os IDs de 1..na (mín. 4)
+      const na = Math.max(4, Number(this.configSilo.na || 4))
+      const idsDesejados = new Set(Array.from({ length: na }, (_, i) => i + 1))
+
+      const esquerda = Array.isArray(this.lados.esquerda) ? [...this.lados.esquerda] : []
+      const direita = Array.isArray(this.lados.direita) ? [...this.lados.direita] : []
+
+      // Remove duplicados e fora do range
+      const limpar = (arr) => {
+        const vistos = new Set()
+        return arr.filter(id => {
+          const ok = idsDesejados.has(id) && !vistos.has(id)
+          if (ok) vistos.add(id)
+          return ok
+        })
+      }
+      let esq = limpar(esquerda)
+      let dir = limpar(direita)
+
+      // Coletar faltantes
+      const presentes = new Set([...esq, ...dir])
+      const faltantes = [...idsDesejados].filter(id => !presentes.has(id))
+
+      // Distribuir faltantes balanceando: lado com menos itens recebe o próximo
+      faltantes.forEach(id => {
+        if (esq.length <= dir.length) esq.push(id)
+        else dir.push(id)
+      })
+
+      this.$set(this.configSilo, 'aeradores_lados', { esquerda: esq, direita: dir })
+      this.$emit('silo-change')
+    },
+    onDragStart(id, origem) {
+      this.drag.id = id
+      this.drag.origem = origem
+    },
+    onDrop(destino) {
+      const { id, origem } = this.drag
+      if (!id || !origem || destino === origem) return
+      // Remove do array de origem
+      const idx = this.lados[origem].indexOf(id)
+      if (idx !== -1) this.lados[origem].splice(idx, 1)
+      // Adiciona ao array de destino
+      this.lados[destino].push(id)
+      // Limpa estado de drag e emite mudança
+      this.drag.id = null
+      this.drag.origem = null
+      this.$emit('silo-change')
+    }
+  }
 }
 </script>

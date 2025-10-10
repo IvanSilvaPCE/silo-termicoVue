@@ -149,6 +149,7 @@ export default {
         ds: 30,
         dy: 0,
         da: 35,
+        aeradores_lados: { esquerda: [], direita: [] },
         escala_sensores: 16,
         dist_y_sensores: 12,
         quantidadePendulos: 5,
@@ -266,6 +267,7 @@ export default {
             ds: dadosSvg.ds || dadosSvg.aeradores?.deslocamento_superior || 30,
             dy: dadosSvg.dy || dadosSvg.aeradores?.deslocamento_y || 0,
             da: dadosSvg.da || dadosSvg.aeradores?.distancia_aeradores || 35,
+            aeradores_lados: dadosSvg.aeradores_lados || dadosSvg.aeradores?.lados || { esquerda: [], direita: [] },
             aerador_rotacao: dadosSvg.aerador_rotacao || dadosSvg.aeradores?.rotacao || 0,
             aerador_escala: dadosSvg.aerador_escala || dadosSvg.aeradores?.escala || 1,
             // Aplicar configurações de sensores

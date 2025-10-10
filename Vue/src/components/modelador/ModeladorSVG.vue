@@ -33,8 +33,29 @@
             @finalizar-configuracao="finalizarConfiguracaoArmazem"
           />
 
-          <!-- Configuração de Pêndulos para Silo - APENAS Etapa 1 -->
+          <!-- Etapa 1: Dados do Silo -->
           <div v-if="tipoAtivo === 'silo' && etapaAtualSilo === 1" class="card mb-3">
+            <div class="card-header p-3" style="background-color: #06335E;">
+              <div class="d-flex align-items-center text-white">
+                <i class="fa fa-id-card me-2"></i>
+                <span class="fw-bold">Dados do Silo</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label class="form-label small fw-bold">Fabricante</label>
+                <input type="text" class="form-control form-control-sm" v-model="configSilo.fabricante" placeholder="Ex.: Fabricante XYZ" />
+              </div>
+              <div class="mb-2">
+                <label class="form-label small fw-bold">Modelo</label>
+                <input type="text" class="form-control form-control-sm" v-model="configSilo.modelo" placeholder="Ex.: SL-2000" />
+              </div>
+              <small class="text-muted">Preencha os dados acima e avance para configurar o layout.</small>
+            </div>
+          </div>
+
+          <!-- Configuração de Pêndulos para Silo - Etapa 2 -->
+          <div v-if="tipoAtivo === 'silo' && etapaAtualSilo === 2" class="card mb-3">
             <div class="card-header p-3" style="background-color: #06335E; cursor: pointer;" 
                  @click="toggleAcordeon('pendulosSilo')"
                  role="button" 
@@ -188,8 +209,8 @@
             </div>
           </div>
 
-          <!-- Controles do Topo do Silo - Etapa 2: Topo -->
-          <div v-if="tipoAtivo === 'silo' && etapaAtualSilo === 2" class="card mb-3">
+          <!-- Controles do Topo do Silo - Etapa 3: Topo -->
+          <div v-if="tipoAtivo === 'silo' && etapaAtualSilo === 3" class="card mb-3">
             <div class="card-header p-3" style="background-color: #06335E; cursor: pointer;" 
                  @click="toggleAcordeon('siloTopo')"
                  role="button" 
@@ -444,8 +465,8 @@
             </div>
           </div>
 
-          <!-- Configurações do Silo - Etapa 1: Lateral -->
-          <div v-if="tipoAtivo === 'silo' && etapaAtualSilo === 1" class="card mb-3">
+          <!-- Configurações do Silo - Etapa 2: Lateral -->
+          <div v-if="tipoAtivo === 'silo' && etapaAtualSilo === 2" class="card mb-3">
             <div class="card-header p-3" style="background-color: #06335E; cursor: pointer;" 
                  @click="toggleAcordeon('siloLateral')"
                  role="button" 
@@ -467,8 +488,8 @@
             </div>
           </div>
 
-          <!-- Etapa 3: Resumo e Salvar (apenas Silo) -->
-          <div v-if="tipoAtivo === 'silo' && etapaAtualSilo === 3" class="card mb-3">
+          <!-- Etapa 4: Resumo e Salvar (apenas Silo) -->
+          <div v-if="tipoAtivo === 'silo' && etapaAtualSilo === 4" class="card mb-3">
             <div class="card-header p-3" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
               <div class="d-flex align-items-center text-white">
                 <i class="fa fa-check-circle me-2"></i>
@@ -514,10 +535,10 @@
 
               <!-- Botões de Ação -->
               <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary btn-sm flex-fill" @click="mudarEtapaSilo(1)">
+                <button class="btn btn-outline-secondary btn-sm flex-fill" @click="mudarEtapaSilo(2)">
                   <i class="fa fa-arrow-left me-1"></i>Revisar Lateral
                 </button>
-                <button class="btn btn-outline-secondary btn-sm flex-fill" @click="mudarEtapaSilo(2)">
+                <button class="btn btn-outline-secondary btn-sm flex-fill" @click="mudarEtapaSilo(3)">
                   <i class="fa fa-arrow-left me-1"></i>Revisar Topo
                 </button>
               </div>
@@ -1114,6 +1135,9 @@ function getDefaultSiloConfig() {
     precisao_grid: 1,
     modo_responsivo: false,
     otimizar_performance: false,
+    // Dados do equipamento
+    fabricante: '',
+    modelo: '',
     // Configurações de pêndulos
     quantidadePendulos: 5,
     sensoresPorPendulo: {
@@ -1258,7 +1282,7 @@ export default {
 
       tipoAtivo: 'silo',
       visaoAtiva: 'lateral',
-      etapaAtualSilo: 1, // 1 = Lateral, 2 = Topo, 3 = Salvar
+      etapaAtualSilo: 1, // 1 = Dados, 2 = Lateral, 3 = Topo, 4 = Salvar
       etapaAtualArmazem: 1, // 1 = Lateral, 2 = Topo, 3 = Salvar
       nomeConfiguracao: '',
       larguraSVG: 400,

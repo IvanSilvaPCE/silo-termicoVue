@@ -1,7 +1,7 @@
 <template>
   <div class="stepper-silo mb-3">
     <div class="stepper-container">
-      <!-- Etapa 1: Silo Lateral -->
+      <!-- Etapa 1: Dados -->
       <div 
         class="stepper-step" 
         :class="{ active: etapaAtual === 1, completed: etapaAtual > 1 }"
@@ -11,13 +11,13 @@
           <i v-if="etapaAtual > 1" class="fa fa-check"></i>
           <span v-else>1</span>
         </div>
-        <div class="step-label">Silo Lateral</div>
+        <div class="step-label">Dados</div>
       </div>
 
       <!-- Linha de conexão -->
       <div class="stepper-line" :class="{ completed: etapaAtual > 1 }"></div>
 
-      <!-- Etapa 2: Silo Topo -->
+      <!-- Etapa 2: Silo Lateral -->
       <div 
         class="stepper-step" 
         :class="{ active: etapaAtual === 2, completed: etapaAtual > 2 }"
@@ -27,17 +27,33 @@
           <i v-if="etapaAtual > 2" class="fa fa-check"></i>
           <span v-else>2</span>
         </div>
-        <div class="step-label">Silo Topo</div>
+        <div class="step-label">Silo Lateral</div>
       </div>
 
       <!-- Linha de conexão -->
       <div class="stepper-line" :class="{ completed: etapaAtual > 2 }"></div>
 
-      <!-- Etapa 3: Salvar -->
+      <!-- Etapa 3: Silo Topo -->
       <div 
         class="stepper-step" 
-        :class="{ active: etapaAtual === 3, completed: false }"
+        :class="{ active: etapaAtual === 3, completed: etapaAtual > 3 }"
         @click="irParaEtapa(3)"
+      >
+        <div class="step-number">
+          <i v-if="etapaAtual > 3" class="fa fa-check"></i>
+          <span v-else>3</span>
+        </div>
+        <div class="step-label">Silo Topo</div>
+      </div>
+
+      <!-- Linha de conexão -->
+      <div class="stepper-line" :class="{ completed: etapaAtual > 3 }"></div>
+
+      <!-- Etapa 4: Salvar -->
+      <div 
+        class="stepper-step" 
+        :class="{ active: etapaAtual === 4, completed: false }"
+        @click="irParaEtapa(4)"
       >
         <div class="step-number">
           <i class="fa fa-save"></i>
@@ -57,7 +73,7 @@
       </button>
 
       <button 
-        v-if="etapaAtual < 3" 
+        v-if="etapaAtual < 4" 
         class="btn btn-primary btn-sm ms-auto"
         @click="avancarEtapa"
       >
@@ -65,7 +81,7 @@
       </button>
 
       <button 
-        v-if="etapaAtual === 3" 
+        v-if="etapaAtual === 4" 
         class="btn btn-success btn-sm ms-auto"
         @click="finalizarConfiguracao"
       >
@@ -73,7 +89,7 @@
       </button>
     </div>
   </div>
-</template>
+  </template>
 
 <script>
 export default {
@@ -96,7 +112,7 @@ export default {
       }
     },
     avancarEtapa() {
-      if (this.etapaAtual < 3) {
+      if (this.etapaAtual < 4) {
         this.$emit('mudar-etapa', this.etapaAtual + 1)
       }
     },
