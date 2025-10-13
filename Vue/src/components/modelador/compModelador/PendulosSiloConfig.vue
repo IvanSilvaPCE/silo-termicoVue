@@ -182,7 +182,11 @@ export default {
   },
   methods: {
     onQuantidadePendulosChange(event) {
-      this.$emit('quantidade-pendulos-change', parseInt(event.target.value))
+      const valor = parseInt(event.target.value)
+      // Atualiza imediatamente o campo no pai para refletir no preview
+      this.$emit('reset-field', 'quantidadePendulos', valor)
+      // Mantém o evento específico para lógica complementar do pai
+      this.$emit('quantidade-pendulos-change', valor)
     },
     resetQuantidadePendulos() {
       this.$emit('reset-field', 'quantidadePendulos', 5)
@@ -194,10 +198,20 @@ export default {
       this.$emit('set-sensores-pendulo', numeroPendulo, parseInt(value))
     },
     onTipoPosicaoChange(numeroPendulo, event) {
-      this.$emit('tipo-posicao-change', numeroPendulo, event.target.value)
+      const valor = event.target.value
+      // Atualiza objeto completo no pai para refletir imediatamente
+      const novo = { ...(this.configSilo.tipoPosicaoPendulo || {}) }
+      novo[numeroPendulo] = valor
+      this.$emit('reset-field', 'tipoPosicaoPendulo', novo)
+      // Mantém evento específico para qualquer lógica adicional do pai
+      this.$emit('tipo-posicao-change', numeroPendulo, valor)
     },
     onTipoCaboChange(numeroPendulo, event) {
-      this.$emit('tipo-cabo-change', numeroPendulo, event.target.value)
+      const valor = event.target.value
+      const novo = { ...(this.configSilo.tipoCaboPendulo || {}) }
+      novo[numeroPendulo] = valor
+      this.$emit('reset-field', 'tipoCaboPendulo', novo)
+      this.$emit('tipo-cabo-change', numeroPendulo, valor)
     },
     aplicarSensoresUniformes() {
       this.$emit('aplicar-sensores-uniformes')

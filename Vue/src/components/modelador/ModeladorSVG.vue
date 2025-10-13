@@ -25,6 +25,39 @@
             @finalizar-configuracao="finalizarConfiguracaoSilo"
           />
 
+          <!-- Etapa 1: Dados do Silo (Fabricante/Modelo) -->
+          <div v-if="tipoAtivo === 'silo' && etapaAtualSilo === 1" class="card mb-3">
+            <div class="card-header p-3" style="background-color: #06335E; cursor: pointer;" 
+                 @click="toggleAcordeon('siloDados')"
+                 role="button" 
+                 tabindex="0"
+                 :aria-expanded="acordeonAberto.siloDados"
+                 @keydown.enter="toggleAcordeon('siloDados')"
+                 @keydown.space.prevent="toggleAcordeon('siloDados')">
+              <div class="d-flex justify-content-between align-items-center text-white">
+                <div class="d-flex align-items-center">
+                  <i class="fa fa-id-card me-2"></i>
+                  <span class="fw-bold">Dados do Equipamento</span>
+                </div>
+                <i :class="['fa', acordeonAberto.siloDados ? 'fa-chevron-up' : 'fa-chevron-down']"></i>
+              </div>
+            </div>
+            <div v-show="acordeonAberto.siloDados" class="card-body p-2">
+              <div class="row g-2">
+                <div class="col-12">
+                  <label class="form-label small">Fabricante</label>
+                  <input type="text" class="form-control form-control-sm" placeholder="Ex.: ACME"
+                         v-model.trim="configSilo.fabricante" />
+                </div>
+                <div class="col-12">
+                  <label class="form-label small">Modelo</label>
+                  <input type="text" class="form-control form-control-sm" placeholder="Ex.: SL-2000"
+                         v-model.trim="configSilo.modelo" />
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Sistema de Etapas para Armazém -->
           <StepperArmazem 
             v-if="tipoAtivo === 'armazem'" 
@@ -51,7 +84,7 @@
 
           <!-- Controles do Topo do Silo - Etapa 2: Topo -->
           <SiloTopoControles
-            v-if="tipoAtivo === 'silo' && etapaAtualSilo === 2"
+            v-if="tipoAtivo === 'silo' && etapaAtualSilo === 3"
             :config-silo="configSilo"
             :acordeon-aberto="acordeonAberto.siloTopo"
             @toggle-acordeon="toggleAcordeon('siloTopo')"
@@ -64,7 +97,7 @@
           />
 
           <!-- Configurações do Silo - Etapa 1: Lateral -->
-          <div v-if="tipoAtivo === 'silo' && etapaAtualSilo === 1" class="card mb-3">
+          <div v-if="tipoAtivo === 'silo' && etapaAtualSilo === 2" class="card mb-3">
             <div class="card-header p-3" style="background-color: #06335E; cursor: pointer;" 
                  @click="toggleAcordeon('siloLateral')"
                  role="button" 
@@ -86,8 +119,8 @@
             </div>
           </div>
 
-          <!-- Etapa 3: Resumo e Salvar (apenas Silo) -->
-          <div v-if="tipoAtivo === 'silo' && etapaAtualSilo === 3" class="card mb-3">
+          <!-- Etapa 4: Resumo e Salvar (apenas Silo) -->
+          <div v-if="tipoAtivo === 'silo' && etapaAtualSilo === 4" class="card mb-3">
             <div class="card-header p-3" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
               <div class="d-flex align-items-center text-white">
                 <i class="fa fa-check-circle me-2"></i>
@@ -101,15 +134,23 @@
                 <small>Revise as configurações abaixo e clique em "Salvar Configuração" para finalizar.</small>
               </div>
 
-              <!-- Resumo das Configurações -->
+                            <!-- Resumo das Configura��es -->
               <div class="mb-3">
                 <h6 class="fw-bold mb-2">
-                  <i class="fa fa-cog me-1"></i>Configurações do Silo
+                  <i class="fa fa-cog me-1"></i>Configura��es do Silo
                 </h6>
                 <ul class="list-unstyled mb-0 small">
-                  <li><i class="fa fa-check text-success me-2"></i>Quantidade de Pêndulos: <strong>{{ configSilo.quantidadePendulos }}</strong></li>
+                  <li><i class="fa fa-check text-success me-2"></i>Quantidade de P�ndulos: <strong>{{ configSilo.quantidadePendulos }}</strong></li>
                   <li><i class="fa fa-check text-success me-2"></i>Total de Sensores: <strong>{{ totalSensoresSilo }}</strong></li>
-                  <li><i class="fa fa-check text-success me-2"></i>Média por Pêndulo: <strong>{{ mediaSensoresSilo.toFixed(1) }} sensores</strong></li>
+                  <li><i class="fa fa-check text-success me-2"></i>M�dia por P�ndulo: <strong>{{ mediaSensoresSilo.toFixed(1) }} sensores</strong></li>
+                </ul>
+              </div>
+
+              <div class="mb-3">
+                <h6 class="fw-bold mb-2"><i class="fa fa-id-card me-1"></i>Identifica��o</h6>
+                <ul class="list-unstyled mb-0 small">
+                  <li v-if="configSilo.fabricante"><i class="fa fa-check text-success me-2"></i>Fabricante: <strong>{{ configSilo.fabricante }}</strong></li>
+                  <li v-if="configSilo.modelo"><i class="fa fa-check text-success me-2"></i>Modelo: <strong>{{ configSilo.modelo }}</strong></li>
                 </ul>
               </div>
 
@@ -133,10 +174,10 @@
 
               <!-- Botões de Ação -->
               <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary btn-sm flex-fill" @click="mudarEtapaSilo(1)">
+                <button class="btn btn-outline-secondary btn-sm flex-fill" @click="mudarEtapaSilo(2)">
                   <i class="fa fa-arrow-left me-1"></i>Revisar Lateral
                 </button>
-                <button class="btn btn-outline-secondary btn-sm flex-fill" @click="mudarEtapaSilo(2)">
+                <button class="btn btn-outline-secondary btn-sm flex-fill" @click="mudarEtapaSilo(3)">
                   <i class="fa fa-arrow-left me-1"></i>Revisar Topo
                 </button>
               </div>
@@ -386,15 +427,23 @@
                 <small>Revise as configurações abaixo e clique em "Salvar Configuração" para finalizar.</small>
               </div>
 
-              <!-- Resumo das Configurações -->
+                            <!-- Resumo das Configura��es -->
               <div class="mb-3">
                 <h6 class="fw-bold mb-2">
-                  <i class="fa fa-cog me-1"></i>Configurações do Armazém
+                  <i class="fa fa-cog me-1"></i>Configura��es do Silo
                 </h6>
                 <ul class="list-unstyled mb-0 small">
-                  <li><i class="fa fa-check text-success me-2"></i>Modelos de Arcos: <strong>{{ quantidadeModelosArcos }}</strong></li>
-                  <li><i class="fa fa-check text-success me-2"></i>Dimensões Configuradas: <strong>Sim</strong></li>
-                  <li v-if="configArmazem.tipo_telhado"><i class="fa fa-check text-success me-2"></i>Tipo de Telhado: <strong>{{ configArmazem.tipo_telhado }}</strong></li>
+                  <li><i class="fa fa-check text-success me-2"></i>Quantidade de P�ndulos: <strong>{{ configSilo.quantidadePendulos }}</strong></li>
+                  <li><i class="fa fa-check text-success me-2"></i>Total de Sensores: <strong>{{ totalSensoresSilo }}</strong></li>
+                  <li><i class="fa fa-check text-success me-2"></i>M�dia por P�ndulo: <strong>{{ mediaSensoresSilo.toFixed(1) }} sensores</strong></li>
+                </ul>
+              </div>
+
+              <div class="mb-3">
+                <h6 class="fw-bold mb-2"><i class="fa fa-id-card me-1"></i>Identifica��o</h6>
+                <ul class="list-unstyled mb-0 small">
+                  <li v-if="configSilo.fabricante"><i class="fa fa-check text-success me-2"></i>Fabricante: <strong>{{ configSilo.fabricante }}</strong></li>
+                  <li v-if="configSilo.modelo"><i class="fa fa-check text-success me-2"></i>Modelo: <strong>{{ configSilo.modelo }}</strong></li>
                 </ul>
               </div>
 
@@ -693,6 +742,9 @@ import dadosSilo from './dadosSilo.js'
 // para evitar mutação compartilhada dos arrays
 function getDefaultSiloConfig() {
   return {
+    // Identificação do equipamento
+    fabricante: '',
+    modelo: '',
     // Dimensões básicas
     lb: 200,
     hs: 180,
@@ -881,7 +933,7 @@ export default {
 
       tipoAtivo: 'silo',
       visaoAtiva: 'lateral',
-      etapaAtualSilo: 1, // 1 = Lateral, 2 = Topo, 3 = Salvar
+      etapaAtualSilo: 1, // 1 = Dados, 2 = Lateral, 3 = Topo, 4 = Salvar
       etapaAtualArmazem: 1, // 1 = Lateral, 2 = Topo, 3 = Salvar
       nomeConfiguracao: '',
       larguraSVG: 400,
@@ -954,6 +1006,7 @@ export default {
       // Estados para o sistema de acordeon
       acordeonAberto: {
         configuracoes: true,      // Configurações principais (silo/armazém)
+        siloDados: true,          // Dados do equipamento (somente silo, etapa 1)
         pendulosSilo: false,      // Configuração de pêndulos (somente silo)
         siloLateral: false,       // Controles da lateral do silo (somente visão lateral)
         siloTopo: false,         // Controles do topo do silo (somente visão topo)
@@ -1202,57 +1255,8 @@ export default {
     // 🎯 NOVOS MÉTODOS: Sistema de Etapas para Silo
     mudarEtapaSilo(numeroEtapa) {
       this.etapaAtualSilo = numeroEtapa
-      
-      // Sincronizar visão baseado na etapa
-      if (numeroEtapa === 1) {
-        this.visaoAtiva = 'lateral'
-      } else if (numeroEtapa === 2) {
-        this.visaoAtiva = 'topo'
-      }
-      
-      // Fechar todos os acordeons ao mudar de etapa
-      this.acordeonAberto = {
-        configuracoes: false,
-        pendulosSilo: false,
-        siloLateral: false,
-        siloTopo: false,
-        modelos: false,
-        cabos: false,
-        dimensoes: false,
-        telhado: false,
-        fundo: false,
-        sensores: false
-      }
 
-      // Abrir o acordeon principal da etapa atual
-      if (numeroEtapa === 1) {
-        this.acordeonAberto.configuracoes = true
-      } else if (numeroEtapa === 2) {
-        this.acordeonAberto.pendulosSilo = true
-      }
-    },
-
-    finalizarConfiguracaoSilo() {
-      // Salvar configuração do Silo
-      this.salvarModeloAtual()
-      this.mostrarToast('Configuração do Silo salva com sucesso!', 'success')
-      
-      // Voltar para etapa 1 para nova configuração
-      this.etapaAtualSilo = 1
-    },
-
-    // 🎯 NOVOS MÉTODOS: Sistema de Etapas para Armazém
-    mudarEtapaArmazem(numeroEtapa) {
-      this.etapaAtualArmazem = numeroEtapa
-      
-      // Sincronizar visão baseado na etapa
-      if (numeroEtapa === 1) {
-        this.visaoAtiva = 'lateral'
-      } else if (numeroEtapa === 2) {
-        this.visaoAtiva = 'topo'
-      }
-      
-      // Fechar todos os acordeons ao mudar de etapa
+      // Resetar acordeons
       this.acordeonAberto = {
         configuracoes: false,
         pendulosSilo: false,
@@ -1268,12 +1272,83 @@ export default {
         gerenciamento: false
       }
 
-      // Abrir o acordeon principal da etapa 1
+      // Abrir acordeons e espelhar preview por etapa
       if (numeroEtapa === 1) {
-        this.acordeonAberto.modelosArcos = true
+        // Etapa 1: Dados (fabricante/modelo)
+        this.acordeonAberto.siloDados = true
+        this.acordeonAberto.pendulosSilo = false
+        this.acordeonAberto.siloLateral = false
+        this.acordeonAberto.siloTopo = false
+        this.visaoAtiva = 'lateral'
+      } else if (numeroEtapa === 2) {
+        // Etapa 2: Silo Lateral
+        this.acordeonAberto.siloLateral = true
+        this.visaoAtiva = 'lateral'
+      } else if (numeroEtapa === 3) {
+        // Etapa 3: Silo Topo
+        this.acordeonAberto.siloTopo = true
+        this.visaoAtiva = 'topo'
+      } else if (numeroEtapa === 4) {
+        // Etapa 4: Salvar
+        this.acordeonAberto.gerenciamento = true
       }
-      // Etapa 2 não tem acordeons (apenas visualização do topo)
-      // Etapa 3 não precisa abrir acordeons (é apenas resumo)
+
+      // Atualizar preview imediatamente
+      this.$nextTick(() => this.updateSVG())
+    },
+
+    finalizarConfiguracaoSilo() {
+      // Salvar configuração do Silo
+      this.salvarModeloAtual()
+      this.mostrarToast('Configuração do Silo salva com sucesso!', 'success')
+      
+      // Voltar para etapa 1 para nova configuração
+      this.etapaAtualSilo = 1
+    },
+
+    // 🎯 NOVOS MÉTODOS: Sistema de Etapas para Armazém
+    mudarEtapaArmazem(numeroEtapa) {
+      this.etapaAtualArmazem = numeroEtapa
+
+      // Sincronizar visão com o preview
+      if (numeroEtapa === 1) {
+        this.visaoAtiva = 'lateral'
+      } else if (numeroEtapa === 2) {
+        this.visaoAtiva = 'topo'
+      }
+
+      // Resetar acordeons
+      this.acordeonAberto = {
+        configuracoes: false,
+        pendulosSilo: false,
+        siloLateral: false,
+        siloTopo: false,
+        modelosArcos: false,
+        dimensoes: false,
+        telhado: false,
+        fundo: false,
+        sensores: false,
+        armazemLateral: false,
+        controles: false,
+        gerenciamento: false
+      }
+
+      // Abrir acordeons por etapa
+      if (numeroEtapa === 1) {
+        // Lateral: configuração geral
+        this.acordeonAberto.modelosArcos = true
+        this.acordeonAberto.dimensoes = true
+        this.acordeonAberto.armazemLateral = true
+      } else if (numeroEtapa === 2) {
+        // Topo: controles do topo
+        this.acordeonAberto.armazemTopo = true
+      } else if (numeroEtapa === 3) {
+        // Resumo: manter acordeons fechados
+        this.acordeonAberto.controles = true
+      } else if (numeroEtapa === 4) {
+        // Salvar: foco no gerenciamento
+        this.acordeonAberto.gerenciamento = true
+      }
     },
 
     finalizarConfiguracaoArmazem() {
@@ -6549,3 +6624,4 @@ input[type="range"]:hover::after,
   }
 }
 </style>
+

@@ -67,8 +67,8 @@
             rx="2"
             ry="2"
             :fill="getCorPendulo(p)"
-            :stroke="getBordaCabo(p)"
-            :stroke-width="getEspessuraBordaCabo(p)"
+            stroke="black"
+            :stroke-width="bordaFina"
             class="pendulo-element"
             style="cursor: ns-resize;"
             @mousedown="iniciarDragPendulo($event, p)"
@@ -101,7 +101,7 @@
               ry="2"
               :fill="getCorSensor(p, s)"
               stroke="black"
-              stroke-width="1"
+              :stroke-width="bordaFina"
               class="sensor-element"
               style="cursor: ns-resize;"
               @mousedown="iniciarDragSensor($event, p, s)"
@@ -248,6 +248,9 @@ export default {
     },
     circulosTopo() {
       return this.config.circulosTopo || [];
+    },
+    bordaFina() {
+      return 0.6
     }
   },
   data() {

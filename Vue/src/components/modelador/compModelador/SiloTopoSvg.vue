@@ -111,8 +111,8 @@
           :cy="centroY" 
           :r="config.tamanhoCirculoPendulo || 5.7138"
           :fill="getCorPendulo(pendulo.label)"
-          :stroke="getBordaCabo(pendulo.label)" 
-          :stroke-width="config.espessuraBordaCirculo || 1.5"
+          stroke="black" 
+          :stroke-width="0.6"
           :title="`Pêndulo ${pendulo.label}`"
         />
 
