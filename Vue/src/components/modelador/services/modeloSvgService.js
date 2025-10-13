@@ -1,4 +1,4 @@
-// src/servicos/modeloSvgService.js
+﻿// src/servicos/modeloSvgService.js
 import client from "@/api.js";
 
 // ===== Helpers =====
@@ -12,7 +12,7 @@ const preservarPosicoesCabos = (dadosSvg) => {
   try {
     const dados = typeof dadosSvg === 'string' ? JSON.parse(dadosSvg) : dadosSvg;
 
-    // 🎯 NOVA ESTRUTURA V6.0: Preservar estrutura de modelos conforme anexo
+    // ðŸŽ¯ NOVA ESTRUTURA V6.0: Preservar estrutura de modelos conforme anexo
     if (dados.modelos) {
 
       Object.keys(dados.modelos).forEach(modeloId => {
@@ -20,21 +20,21 @@ const preservarPosicoesCabos = (dadosSvg) => {
 
         if (modelo && modelo.dimensoes && modelo.modeloEspecifico) {
 
-          // 🔒 PRESERVAR TOTALMENTE as dimensões já salvas - NÃO alterar
+          // ðŸ”’ PRESERVAR TOTALMENTE as dimensÃµes jÃ¡ salvas - NÃƒO alterar
           if (modelo.dimensoes) {
           }
 
-          // 🔒 PRESERVAR posições dos pêndulos
+          // ðŸ”’ PRESERVAR posiÃ§Ãµes dos pÃªndulos
           if (modelo.modeloEspecifico.posicoesPendulos) {
             const totalPosicoes = Object.keys(modelo.modeloEspecifico.posicoesPendulos).length;
           }
 
-          // 🔒 PRESERVAR posições manuais dos sensores
+          // ðŸ”’ PRESERVAR posiÃ§Ãµes manuais dos sensores
           if (modelo.modeloEspecifico.posicoesManualSensores) {
             const totalSensores = Object.keys(modelo.modeloEspecifico.posicoesManualSensores).length;
           }
 
-          // 🔒 PRESERVAR sensores por pêndulo
+          // ðŸ”’ PRESERVAR sensores por pÃªndulo
           if (modelo.modeloEspecifico.sensoresPorPendulo) {
             const totalSensoresPorPendulo = Object.keys(modelo.modeloEspecifico.sensoresPorPendulo).length;
           }
@@ -44,7 +44,7 @@ const preservarPosicoesCabos = (dadosSvg) => {
       return typeof dadosSvg === 'string' ? JSON.stringify(dados) : dados;
     }
 
-    // 🔄 FALLBACK: Estrutura antiga (modelosDefinidos)
+    // ðŸ”„ FALLBACK: Estrutura antiga (modelosDefinidos)
     if (dados.modelosDefinidos) {
       Object.keys(dados.modelosDefinidos).forEach(modeloKey => {
         const modelo = dados.modelosDefinidos[modeloKey];
@@ -54,18 +54,18 @@ const preservarPosicoesCabos = (dadosSvg) => {
           const quantidadePendulos = modelo.quantidadePendulos || 3;
 
 
-          // 🔒 PRESERVAR TOTALMENTE as dimensões - NÃO sobrescrever se já existem
+          // ðŸ”’ PRESERVAR TOTALMENTE as dimensÃµes - NÃƒO sobrescrever se jÃ¡ existem
           const dimensoesSalvas = ['pb', 'lb', 'hb', 'hf', 'lf', 'le', 'ht'];
           dimensoesSalvas.forEach(dim => {
             if (config[dim] !== undefined && config[dim] !== null) {
             } else {
-              // Apenas aplicar defaults se realmente não existir
+              // Apenas aplicar defaults se realmente nÃ£o existir
               const defaults = { pb: 185, lb: 350, hb: 30, hf: 6, lf: 250, le: 15, ht: 50 };
               config[dim] = defaults[dim];
             }
           });
 
-          // CRÍTICO: Preservar configurações do telhado
+          // CRÃTICO: Preservar configuraÃ§Ãµes do telhado
           if (config.tipo_telhado === undefined) config.tipo_telhado = 1;
           if (config.curvatura_topo === undefined) config.curvatura_topo = 30;
           if (config.pontas_redondas === undefined) config.pontas_redondas = false;
@@ -73,7 +73,7 @@ const preservarPosicoesCabos = (dadosSvg) => {
           if (config.estilo_laterais === undefined) config.estilo_laterais = 'reta';
           if (config.curvatura_laterais === undefined) config.curvatura_laterais = 0;
 
-          // CRÍTICO: Preservar configurações do fundo
+          // CRÃTICO: Preservar configuraÃ§Ãµes do fundo
           if (config.tipo_fundo === undefined) config.tipo_fundo = 0;
           if (config.altura_fundo_reto === undefined) config.altura_fundo_reto = 10;
           if (config.altura_funil_v === undefined) config.altura_funil_v = 18;
@@ -89,7 +89,7 @@ const preservarPosicoesCabos = (dadosSvg) => {
           if (config.deslocamento_horizontal_fundo === undefined) config.deslocamento_horizontal_fundo = 0;
           if (config.deslocamento_vertical_fundo === undefined) config.deslocamento_vertical_fundo = -1;
 
-          // Configurações de sensores - apenas garantir que existam SEM alterar valores salvos
+          // ConfiguraÃ§Ãµes de sensores - apenas garantir que existam SEM alterar valores salvos
           if (config.escala_sensores === undefined) config.escala_sensores = 16;
           if (config.dist_y_sensores === undefined) config.dist_y_sensores = 12;
           if (config.dist_x_sensores === undefined) config.dist_x_sensores = 0;
@@ -97,12 +97,12 @@ const preservarPosicoesCabos = (dadosSvg) => {
           if (config.posicao_vertical === undefined) config.posicao_vertical = 0;
           if (config.afastamento_vertical_pendulo === undefined) config.afastamento_vertical_pendulo = 0;
 
-          // IMPORTANTE: Preservar posições individuais dos cabos EXATAMENTE como foram salvas
+          // IMPORTANTE: Preservar posiÃ§Ãµes individuais dos cabos EXATAMENTE como foram salvas
           if (!config.posicoesCabos) {
             config.posicoesCabos = {};
           }
 
-          // NOVO: Preservar posições manuais dos pêndulos E SENSORES (drag and drop)
+          // NOVO: Preservar posiÃ§Ãµes manuais dos pÃªndulos E SENSORES (drag and drop)
           if (!config.posicoesManualPendulos) {
             config.posicoesManualPendulos = {};
           }
@@ -110,17 +110,17 @@ const preservarPosicoesCabos = (dadosSvg) => {
             config.posicoesManualSensores = {};
           }
 
-          // CRÍTICO: Preservar posições manuais dos sensores do modeloEspecifico
+          // CRÃTICO: Preservar posiÃ§Ãµes manuais dos sensores do modeloEspecifico
           if (modelo.modeloEspecifico && modelo.modeloEspecifico.posicoesManualSensores) {
             config.posicoesManualSensores = { ...modelo.modeloEspecifico.posicoesManualSensores };
           }
 
-          // NOVO: Preservar posições manuais dos pêndulos
+          // NOVO: Preservar posiÃ§Ãµes manuais dos pÃªndulos
           if (!config.posicoesManualPendulos) {
             config.posicoesManualPendulos = {};
           }
 
-          // CRÍTICO: Preservar posições manuais dos pêndulos do modeloEspecifico
+          // CRÃTICO: Preservar posiÃ§Ãµes manuais dos pÃªndulos do modeloEspecifico
           if (modelo.modeloEspecifico && modelo.modeloEspecifico.posicoesManualPendulos) {
             config.posicoesManualPendulos = { ...modelo.modeloEspecifico.posicoesManualPendulos };
           }
@@ -135,25 +135,25 @@ const preservarPosicoesCabos = (dadosSvg) => {
             modelo.modeloEspecifico.posicoesManualPendulos = {};
           }
 
-          // Garantir estrutura para cada cabo, mas SEM alterar posições existentes
+          // Garantir estrutura para cada cabo, mas SEM alterar posiÃ§Ãµes existentes
           for (let i = 1; i <= quantidadePendulos; i++) {
             if (!config.posicoesCabos[i]) {
-              // Só criar se não existir
+              // SÃ³ criar se nÃ£o existir
               config.posicoesCabos[i] = {
-                x: 0, // Posição horizontal personalizada
-                y: 0, // Posição vertical personalizada
+                x: 0, // PosiÃ§Ã£o horizontal personalizada
+                y: 0, // PosiÃ§Ã£o vertical personalizada
                 offsetX: 0, // Offset adicional X
                 offsetY: 0, // Offset adicional Y
-                altura: 0, // Altura específica do cabo
-                distanciaHorizontal: 0, // Distância horizontal específica
-                numeroSensores: 3, // Número de sensores neste cabo/pêndulo
+                altura: 0, // Altura especÃ­fica do cabo
+                distanciaHorizontal: 0, // DistÃ¢ncia horizontal especÃ­fica
+                numeroSensores: 3, // NÃºmero de sensores neste cabo/pÃªndulo
                 timestampAlteracao: Date.now()
               };
             } else {
-              // PRESERVAR TOTALMENTE as posições já salvas
+              // PRESERVAR TOTALMENTE as posiÃ§Ãµes jÃ¡ salvas
               const posicaoExistente = config.posicoesCabos[i];
 
-              // Apenas garantir que campos obrigatórios existam SEM ALTERAR valores existentes
+              // Apenas garantir que campos obrigatÃ³rios existam SEM ALTERAR valores existentes
               if (posicaoExistente.offsetX === undefined) posicaoExistente.offsetX = 0;
               if (posicaoExistente.offsetY === undefined) posicaoExistente.offsetY = 0;
               if (posicaoExistente.altura === undefined) posicaoExistente.altura = 0;
@@ -164,13 +164,13 @@ const preservarPosicoesCabos = (dadosSvg) => {
             }
           }
 
-          // NOVO: Log das posições manuais preservadas (pêndulos E sensores)
+          // NOVO: Log das posiÃ§Ãµes manuais preservadas (pÃªndulos E sensores)
           const totalPendulosManual = Object.keys(config.posicoesManualPendulos).length;
           const totalSensoresManual = Object.keys(config.posicoesManualSensores).length;
           if (totalPendulosManual > 0 || totalSensoresManual > 0) {
           }
 
-          // Construir array pos_x_cabo baseado nas posições individuais salvas
+          // Construir array pos_x_cabo baseado nas posiÃ§Ãµes individuais salvas
           if (config.posicoesCabos) {
             const posicoesArray = [];
             for (let i = 1; i <= quantidadePendulos; i++) {
@@ -184,7 +184,7 @@ const preservarPosicoesCabos = (dadosSvg) => {
             config.pos_x_cabo = posicoesArray;
           }
 
-          // Calcular distância entre cabos baseada nas posições reais
+          // Calcular distÃ¢ncia entre cabos baseada nas posiÃ§Ãµes reais
           if (config.pos_x_cabo && config.pos_x_cabo.length > 1) {
             const distancias = [];
             for (let i = 1; i < config.pos_x_cabo.length; i++) {
@@ -195,7 +195,7 @@ const preservarPosicoesCabos = (dadosSvg) => {
             config.distancia_entre_cabos = [0];
           }
 
-          // Adicionar informações do modelo
+          // Adicionar informaÃ§Ãµes do modelo
           if (!config.informacoesModelo) {
             config.informacoesModelo = {};
           }
@@ -206,7 +206,7 @@ const preservarPosicoesCabos = (dadosSvg) => {
           config.informacoesModelo.posicionamentoPersonalizado = true;
 
 
-          // VALIDAÇÃO CRÍTICA: Verificar se dimensões básicas estão sendo preservadas
+          // VALIDAÃ‡ÃƒO CRÃTICA: Verificar se dimensÃµes bÃ¡sicas estÃ£o sendo preservadas
           const dimensoesCriticas = ['pb', 'lb', 'hb', 'hf', 'lf', 'le', 'ht'];
           const dimensoesPreservadas = dimensoesCriticas.filter(dim =>
             config[dim] !== undefined && config[dim] !== null
@@ -230,19 +230,19 @@ const validarDadosModelo = (dados) => {
   const erros = [];
 
   if (!dados.nm_modelo || typeof dados.nm_modelo !== "string" || !dados.nm_modelo.trim()) {
-    erros.push("Nome do modelo é obrigatório e deve ser uma string não vazia");
+    erros.push("Nome do modelo Ã© obrigatÃ³rio e deve ser uma string nÃ£o vazia");
   }
   if (!dados.tp_svg || !["A", "S"].includes(dados.tp_svg)) {
-    erros.push("Tipo SVG deve ser 'A' (Armazém) ou 'S' (Silo)");
+    erros.push("Tipo SVG deve ser 'A' (ArmazÃ©m) ou 'S' (Silo)");
   }
   if (!dados.vista_svg || !["F", "L", "T"].includes(dados.vista_svg)) {
     erros.push("Vista SVG deve ser 'F' (Frontal), 'L' (Lateral) ou 'T' (Topo)");
   }
   if (!dados.dado_svg || typeof dados.dado_svg !== "string" || !dados.dado_svg.trim() || dados.dado_svg === "{}") {
-    erros.push("Dados SVG são obrigatórios e devem conter dados válidos");
+    erros.push("Dados SVG sÃ£o obrigatÃ³rios e devem conter dados vÃ¡lidos");
   }
   if (dados.dado_svg && typeof dados.dado_svg === "string") {
-    try { JSON.parse(dados.dado_svg); } catch { erros.push("Dados SVG devem ser um JSON válido"); }
+    try { JSON.parse(dados.dado_svg); } catch { erros.push("Dados SVG devem ser um JSON vÃ¡lido"); }
   }
 
 
@@ -261,12 +261,12 @@ const extrairMensagemErro = (error) => {
   if (data && typeof data === "object" && !Array.isArray(data)) {
     if (data.errors) {
       const lista = Object.values(data.errors).flat().join(" | ");
-      return { status, mensagem: `Validação: ${lista}`, payload: data };
+      return { status, mensagem: `ValidaÃ§Ã£o: ${lista}`, payload: data };
     }
     const valores = Object.values(data);
     if (valores.length && valores.every(v => Array.isArray(v))) {
       const lista = valores.flat().join(" | ");
-      return { status, mensagem: `Validação: ${lista}`, payload: data };
+      return { status, mensagem: `ValidaÃ§Ã£o: ${lista}`, payload: data };
     }
     if (data.message) return { status, mensagem: data.message, payload: data };
     if (data.error) return { status, mensagem: data.error, payload: data };
@@ -278,15 +278,15 @@ const extrairMensagemErro = (error) => {
 
 // ===== API =====
 const salvarModelo = async (dadosModelo) => {
-  let dadosComDefaults = null; // <- disponível no catch
+  let dadosComDefaults = null; // <- disponÃ­vel no catch
 
   try {
     const token = pegarToken();
     if (!token) {
-      return { status: 401, success: false, message: "Token de autenticação não encontrado" };
+      return { status: 401, success: false, message: "Token de autenticaÃ§Ã£o nÃ£o encontrado" };
     }
 
-    console.log("🔄 [ENTRADA] Dados recebidos na função salvarModelo:", {
+    console.log("ðŸ”„ [ENTRADA] Dados recebidos na funÃ§Ã£o salvarModelo:", {
       dadosModelo,
       tipo: typeof dadosModelo,
       keys: dadosModelo ? Object.keys(dadosModelo) : "null/undefined",
@@ -299,8 +299,8 @@ const salvarModelo = async (dadosModelo) => {
     });
 
     if (!dadosModelo || typeof dadosModelo !== "object") {
-      console.error("❌ [ENTRADA] dadosModelo é inválido:", dadosModelo);
-      return { status: 400, success: false, message: "Dados do modelo são obrigatórios e devem ser um objeto válido" };
+      console.error("âŒ [ENTRADA] dadosModelo Ã© invÃ¡lido:", dadosModelo);
+      return { status: 400, success: false, message: "Dados do modelo sÃ£o obrigatÃ³rios e devem ser um objeto vÃ¡lido" };
     }
 
     dadosComDefaults = {
@@ -328,11 +328,11 @@ const salvarModelo = async (dadosModelo) => {
     if (dadosModelo.dado_svg) {
       if (typeof dadosModelo.dado_svg === "string") {
         try {
-          // VALIDAR JSON sem alterar conteúdo
+          // VALIDAR JSON sem alterar conteÃºdo
           const dadosParseados = JSON.parse(dadosModelo.dado_svg);
           dadoSvgProcessado = dadosModelo.dado_svg.trim();
 
-          console.log(`✅ [PROCESSAMENTO] Dados SVG string preservados:`, {
+          console.log(`âœ… [PROCESSAMENTO] Dados SVG string preservados:`, {
             tipo: dadosParseados.modelos ? 'v6.0' : 'legado',
             modelos: dadosParseados.modelos ? Object.keys(dadosParseados.modelos).length : 
                      dadosParseados.modelosDefinidos ? Object.keys(dadosParseados.modelosDefinidos).length : 0,
@@ -340,14 +340,14 @@ const salvarModelo = async (dadosModelo) => {
           });
         }
         catch {
-          console.warn("⚠️ [PROCESSAMENTO] dado_svg não é JSON válido, preservando como string");
+          console.warn("âš ï¸ [PROCESSAMENTO] dado_svg nÃ£o Ã© JSON vÃ¡lido, preservando como string");
           dadoSvgProcessado = dadosModelo.dado_svg;
         }
       } else if (typeof dadosModelo.dado_svg === "object") {
         // PRESERVAR INTEGRALMENTE o objeto modelado
         dadoSvgProcessado = JSON.stringify(dadosModelo.dado_svg);
 
-        console.log(`✅ [PROCESSAMENTO] Dados SVG objeto preservados:`, {
+        console.log(`âœ… [PROCESSAMENTO] Dados SVG objeto preservados:`, {
           tipo: dadosModelo.dado_svg.modelos ? 'v6.0' : 'legado',
           modelos: dadosModelo.dado_svg.modelos ? Object.keys(dadosModelo.dado_svg.modelos).length : 
                    dadosModelo.dado_svg.modelosDefinidos ? Object.keys(dadosModelo.dado_svg.modelosDefinidos).length : 0,
@@ -358,9 +358,9 @@ const salvarModelo = async (dadosModelo) => {
       }
     }
 
-    // IMPORTANTE: Apenas criar dados básicos se realmente não houver dados
+    // IMPORTANTE: Apenas criar dados bÃ¡sicos se realmente nÃ£o houver dados
     if (!dadoSvgProcessado || dadoSvgProcessado.trim() === "") {
-      console.log("🆕 [PROCESSAMENTO] Criando estrutura básica pois dados estão vazios");
+      console.log("ðŸ†• [PROCESSAMENTO] Criando estrutura bÃ¡sica pois dados estÃ£o vazios");
       dadoSvgProcessado = JSON.stringify({
         versao: "1.0",
         tipo: "modelo_basico",
@@ -368,7 +368,7 @@ const salvarModelo = async (dadosModelo) => {
         timestamp: Date.now()
       });
     } else {
-      console.log(`✅ [PROCESSAMENTO] Dados SVG preservados - tamanho: ${dadoSvgProcessado.length} caracteres`);
+      console.log(`âœ… [PROCESSAMENTO] Dados SVG preservados - tamanho: ${dadoSvgProcessado.length} caracteres`);
     }
 
     // IMPORTANTE: Salvar primeiro no localStorage antes de enviar para o banco
@@ -380,15 +380,15 @@ const salvarModelo = async (dadosModelo) => {
         timestamp: Date.now(),
         nome: dadosComDefaults.nm_modelo
       }));
-      console.log("💾 [LOCALSTORAGE] Modelo salvo temporariamente:", chaveLocalStorage);
+      console.log("ðŸ’¾ [LOCALSTORAGE] Modelo salvo temporariamente:", chaveLocalStorage);
     } catch (error) {
-      console.warn("⚠️ [LOCALSTORAGE] Erro ao salvar no localStorage:", error);
+      console.warn("âš ï¸ [LOCALSTORAGE] Erro ao salvar no localStorage:", error);
     }
 
-    // Preservar posições exatas dos cabos como foram definidas pelo usuário
+    // Preservar posiÃ§Ãµes exatas dos cabos como foram definidas pelo usuÃ¡rio
     dadosComDefaults.dado_svg = preservarPosicoesCabos(dadoSvgProcessado);
 
-    console.log("🔄 [PROCESSAMENTO] Dados após aplicar defaults:", {
+    console.log("ðŸ”„ [PROCESSAMENTO] Dados apÃ³s aplicar defaults:", {
       nm_modelo: dadosComDefaults.nm_modelo,
       tp_svg: dadosComDefaults.tp_svg,
       vista_svg: dadosComDefaults.vista_svg,
@@ -399,11 +399,11 @@ const salvarModelo = async (dadosModelo) => {
 
     const validacao = validarDadosModelo(dadosComDefaults);
     if (!validacao.valido) {
-      console.error("❌ [PENÚLTIMA] Dados inválidos após processamento:", { dadosProcessados: dadosComDefaults, errosValidacao: validacao.erros, dadosOriginais: dadosModelo });
-      return { status: 400, success: false, message: `Dados inválidos: ${validacao.erros.join(", ")}`, error: validacao.erros };
+      console.error("âŒ [PENÃšLTIMA] Dados invÃ¡lidos apÃ³s processamento:", { dadosProcessados: dadosComDefaults, errosValidacao: validacao.erros, dadosOriginais: dadosModelo });
+      return { status: 400, success: false, message: `Dados invÃ¡lidos: ${validacao.erros.join(", ")}`, error: validacao.erros };
     }
 
-    // 🔍 VALIDAÇÃO CRÍTICA: Verificar se dimensões básicas estão preservadas no payload final
+    // ðŸ” VALIDAÃ‡ÃƒO CRÃTICA: Verificar se dimensÃµes bÃ¡sicas estÃ£o preservadas no payload final
     let dimensoesFinalValidacao = null;
     try {
       const dadosParsed = JSON.parse(dadosComDefaults.dado_svg);
@@ -425,10 +425,10 @@ const salvarModelo = async (dadosModelo) => {
         });
       }
     } catch (error) {
-      console.warn('⚠️ [VALIDAÇÃO] Erro ao verificar dimensões finais:', error);
+      console.warn('âš ï¸ [VALIDAÃ‡ÃƒO] Erro ao verificar dimensÃµes finais:', error);
     }
 
-    console.log("🔄 [PENÚLTIMA] Dados preparados para envio (estrutura final):", {
+    console.log("ðŸ”„ [PENÃšLTIMA] Dados preparados para envio (estrutura final):", {
       nm_modelo: `"${dadosComDefaults.nm_modelo}"`,
       tp_svg: `"${dadosComDefaults.tp_svg}"`,
       vista_svg: `"${dadosComDefaults.vista_svg}"`,
@@ -439,7 +439,7 @@ const salvarModelo = async (dadosModelo) => {
       payload_completo: dadosComDefaults,
     });
 
-    console.log("🔍 [PENÚLTIMA] Validação final dos campos obrigatórios:", {
+    console.log("ðŸ” [PENÃšLTIMA] ValidaÃ§Ã£o final dos campos obrigatÃ³rios:", {
       nm_modelo_valido: !!(dadosComDefaults.nm_modelo && dadosComDefaults.nm_modelo.trim()),
       tp_svg_valido: !!(dadosComDefaults.tp_svg && ["A", "S"].includes(dadosComDefaults.tp_svg)),
       vista_svg_valido: !!(dadosComDefaults.vista_svg && ["F", "L", "T"].includes(dadosComDefaults.vista_svg)),
@@ -462,19 +462,19 @@ const salvarModelo = async (dadosModelo) => {
     );
 
 
-    console.log("✅ [ÚLTIMA] Resposta do servidor:", response.data);
-    console.log("✅ [ÚLTIMA] Status da resposta:", response.status);
+    console.log("âœ… [ÃšLTIMA] Resposta do servidor:", response.data);
+    console.log("âœ… [ÃšLTIMA] Status da resposta:", response.status);
 
     return { status: response.status, data: response.data, success: true, message: "Modelo salvo com sucesso!" };
   } catch (error) {
-    console.error("❌ [ÚLTIMA] Erro ao salvar modelo:", error);
+    console.error("âŒ [ÃšLTIMA] Erro ao salvar modelo:", error);
 
     // Logs seguros (sem quebrar por escopo)
     let dadosEnviados = null;
     try { dadosEnviados = error.config?.data ? JSON.parse(error.config.data) : null; }
     catch { dadosEnviados = error.config?.data || null; }
 
-    console.error("❌ [ÚLTIMA] Detalhes do erro:", {
+    console.error("âŒ [ÃšLTIMA] Detalhes do erro:", {
       message: error.message,
       status: error.response?.status,
       statusText: error.response?.statusText,
@@ -486,7 +486,7 @@ const salvarModelo = async (dadosModelo) => {
     });
 
     if (error.response?.status === 422) {
-      console.error("🚨 [ÚLTIMA] Erro de validação 422 - Dados rejeitados pelo servidor:", {
+      console.error("ðŸš¨ [ÃšLTIMA] Erro de validaÃ§Ã£o 422 - Dados rejeitados pelo servidor:", {
         dadosEnviados,
         respostaServidor: error.response?.data,
       });
@@ -500,9 +500,28 @@ const salvarModelo = async (dadosModelo) => {
 const buscarModelos = async (tipo = null) => {
   try {
     const token = pegarToken();
-    if (!token) return { status: 401, data: [], success: false, error: "Token de autenticação não encontrado" };
+    if (!token) return { status: 401, data: [], success: false, error: "Token de autenticaÃ§Ã£o nÃ£o encontrado" };
 
     const url = tipo ? `/svg?tp_svg=${encodeURIComponent(tipo)}` : "/svg";
+    const response = await client.get(url, { headers: { Authorization: token, Accept: "application/json" } });
+    return { status: response.status, data: response.data || [], success: true };
+  } catch (error) {
+    const { status, mensagem } = extrairMensagemErro(error);
+    return { status, data: [], success: false, error: mensagem };
+  }
+};
+
+// Buscar modelos com filtro para tp_svg e vista_svg
+const buscarModelosFiltrados = async (tp = null, vista = null) => {
+  try {
+    const token = pegarToken();
+    if (!token) return { status: 401, data: [], success: false, error: "Token de autenticação não encontrado" };
+
+    const params = [];
+    if (tp) params.push(`tp_svg=${encodeURIComponent(tp)}`);
+    if (vista) params.push(`vista_svg=${encodeURIComponent(vista)}`);
+    const url = params.length ? `/svg?${params.join('&')}` : "/svg";
+
     const response = await client.get(url, { headers: { Authorization: token, Accept: "application/json" } });
     return { status: response.status, data: response.data || [], success: true };
   } catch (error) {
@@ -545,10 +564,10 @@ const atualizarModelo = async (id, dadosModelo) => {
 const excluirModelo = async (id) => {
   try {
     const token = pegarToken();
-    if (!token) return { status: 401, success: false, message: "Token de autenticação não encontrado", error: "NO_TOKEN" };
+    if (!token) return { status: 401, success: false, message: "Token de autenticaÃ§Ã£o nÃ£o encontrado", error: "NO_TOKEN" };
 
     const response = await client.delete(`/svg/${id}`, { headers: { Authorization: token, Accept: "application/json" } });
-    return { status: response.status, data: response.data, success: true, message: "Modelo excluído com sucesso!" };
+    return { status: response.status, data: response.data, success: true, message: "Modelo excluÃ­do com sucesso!" };
   } catch (error) {
     const { status, mensagem, payload } = extrairMensagemErro(error);
     return { status, success: false, message: mensagem, error: payload || mensagem };
@@ -558,6 +577,7 @@ const excluirModelo = async (id) => {
 export const modeloSvgService = {
   salvarModelo,
   buscarModelos,
+  buscarModelosFiltrados,
   buscarModeloPorId,
   atualizarModelo,
   excluirModelo,

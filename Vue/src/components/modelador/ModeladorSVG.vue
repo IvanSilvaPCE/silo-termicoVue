@@ -46,16 +46,16 @@
               <div class="row g-2">
                 <!-- Seleção de modo: Editar modelo pronto ou Criar novo -->
                 <div class="col-12">
-                  <div class="btn-group w-100 modo-dados-toggle" role="group" aria-label="Selecionar modo de entrada">
+                  <div class="btn-group w-100" role="group" aria-label="Selecionar modo de entrada">
                     <input type="radio" class="btn-check" name="modoDadosSilo" id="modoEditar"
                            autocomplete="off" value="editar" v-model="modoDadosSilo">
-                    <label class="btn btn-outline-primary btn-sm flex-fill" for="modoEditar">
+                    <label class="btn btn-outline-primary btn-sm" for="modoEditar">
                       <i class="fa fa-pencil-square-o me-1"></i>Editar modelo pronto
                     </label>
 
                     <input type="radio" class="btn-check" name="modoDadosSilo" id="modoCriar"
                            autocomplete="off" value="criar" v-model="modoDadosSilo">
-                    <label class="btn btn-outline-primary btn-sm flex-fill" for="modoCriar">
+                    <label class="btn btn-outline-primary btn-sm" for="modoCriar">
                       <i class="fa fa-plus me-1"></i>Criar novo
                     </label>
                   </div>
@@ -1061,13 +1061,12 @@ export default {
     isMobile() {
       return typeof window !== 'undefined' && window.innerWidth <= 576
     },
-      configsDisponiveis() {
-        // Retornar modelos do banco filtrados por tipo e vista
-        const tp = this.tipoAtivo === 'silo' ? 'S' : 'A'
-        const vista = this.visaoAtiva === 'topo' ? 'T' : 'F'
-        return this.modelosBanco.filter(m => m.tp_svg === tp && m.vista_svg === vista)
-      },
-      
+    configsDisponiveis() {
+      // Retornar modelos do banco filtrados por tipo e vista
+      const tp = this.tipoAtivo === 'silo' ? 'S' : 'A'
+      const vista = this.visaoAtiva === 'topo' ? 'T' : 'F'
+      return this.modelosBanco.filter(m => m.tp_svg === tp && m.vista_svg === vista)
+    },
     modeloNome: {
       get() {
         return this.modeloArcoAtual ? this.modelosArcos[this.modeloArcoAtual]?.nome || '' : ''
@@ -1296,6 +1295,7 @@ export default {
   },
   methods: {
     // Método para alternar seções do acordeon
+    toggleAcordeon(secao) {
       this.$set(this.acordeonAberto, secao, !this.acordeonAberto[secao])
     },
 
@@ -6675,21 +6675,5 @@ input[type="range"]:hover::after,
     font-size: 1rem;
   }
 }
-
-/* Toggle bonito para Editar/Criar com cores do tema */
-.modo-dados-toggle .btn {
-  border-color: #06335E;
-  color: #06335E;
-  font-weight: 600;
-}
-.modo-dados-toggle .btn:focus { box-shadow: none; }
-.modo-dados-toggle .btn-check:checked + .btn {
-  color: #fff;
-  background-color: #06335E;
-  border-color: #06335E;
-}
-.modo-dados-toggle .btn + .btn { margin-left: -1px; }
-.modo-dados-toggle .btn:first-of-type { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
-.modo-dados-toggle .btn:last-of-type { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }</style>
-
+</style>
 
