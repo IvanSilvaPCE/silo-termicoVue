@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="container-fluid p-0">
     <div class="row g-0">
       <!-- Painel de Controles -->
@@ -25,7 +25,7 @@
             @finalizar-configuracao="finalizarConfiguracaoSilo"
           />
 
-          <!-- Etapa 1: Dados do Silo (Fabricante/Modelo) -->
+          <!-- Etapa 1: Dados do Silo (Escolha Editar/Criar) -->
           <div v-if="tipoAtivo === 'silo' && etapaAtualSilo === 1" class="card mb-3">
             <div class="card-header p-3" style="background-color: #06335E; cursor: pointer;" 
                  @click="toggleAcordeon('siloDados')"
@@ -44,12 +44,44 @@
             </div>
             <div v-show="acordeonAberto.siloDados" class="card-body p-2">
               <div class="row g-2">
+                <!-- Seleção de modo: Editar modelo pronto ou Criar novo -->
                 <div class="col-12">
+                  <div class="btn-group w-100 modo-dados-toggle" role="group" aria-label="Selecionar modo de entrada">
+                    <input type="radio" class="btn-check" name="modoDadosSilo" id="modoEditar"
+                           autocomplete="off" value="editar" v-model="modoDadosSilo">
+                    <label class="btn btn-outline-primary btn-sm flex-fill" for="modoEditar">
+                      <i class="fa fa-pencil-square-o me-1"></i>Editar modelo pronto
+                    </label>
+
+                    <input type="radio" class="btn-check" name="modoDadosSilo" id="modoCriar"
+                           autocomplete="off" value="criar" v-model="modoDadosSilo">
+                    <label class="btn btn-outline-primary btn-sm flex-fill" for="modoCriar">
+                      <i class="fa fa-plus me-1"></i>Criar novo
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Lista de modelos salvos (via backend) -->
+                <div class="col-12" v-if="modoDadosSilo === 'editar'">
+                  <label class="form-label small">Modelos salvos</label>
+                  <select class="form-select form-select-sm" v-model="modeloSelecionadoMock">
+                    <option value="">Selecione um modelo salvo</option>
+                    <option v-for="m in configsDisponiveis" :key="m.id_svg" :value="m.id_svg">
+                      {{ m.nm_modelo }} • {{ m.tp_svg === 'S' ? 'Silo' : 'Armazém' }} / {{ m.vista_svg === 'T' ? 'Topo' : 'Lateral' }}
+                    </option>
+                  </select>
+                  <small class="text-muted d-block mt-1" v-if="modeloSelecionadoMock">
+                    Modelo selecionado para edição.
+                  </small>
+                </div>
+
+                <!-- Campos para criar novo -->
+                <div class="col-12" v-if="modoDadosSilo === 'criar'">
                   <label class="form-label small">Fabricante</label>
                   <input type="text" class="form-control form-control-sm" placeholder="Ex.: ACME"
                          v-model.trim="configSilo.fabricante" />
                 </div>
-                <div class="col-12">
+                <div class="col-12" v-if="modoDadosSilo === 'criar'">
                   <label class="form-label small">Modelo</label>
                   <input type="text" class="form-control form-control-sm" placeholder="Ex.: SL-2000"
                          v-model.trim="configSilo.modelo" />
@@ -878,10 +910,13 @@ export default {
     SiloLateralSvg,
     ArmazemTopoSvg
   },
-  data() {
-    return {
-      // Estados para configurações do Silo
-      configSilo: getDefaultSiloConfig(),
+    data() {
+      return {
+        // Estados para configurações do Silo
+        configSilo: getDefaultSiloConfig(),
+        // Modo de entrada dos dados do Silo
+        modoDadosSilo: 'criar', // 'criar' | 'editar'
+        modeloSelecionadoMock: '', // id do modelo selecionado no banco
       
       // Layout para geração do SVG do Silo
       layoutSilo: null,
@@ -1026,16 +1061,13 @@ export default {
     isMobile() {
       return typeof window !== 'undefined' && window.innerWidth <= 576
     },
-    configsDisponiveis() {
-      // Retornar modelos do banco filtrados por tipo
-      return this.modelosBanco.filter(modelo => {
-        if (this.tipoAtivo === 'silo') {
-          return modelo.tp_svg === 'S'
-        } else {
-          return modelo.tp_svg === 'A'
-        }
-      })
-    },
+      configsDisponiveis() {
+        // Retornar modelos do banco filtrados por tipo e vista
+        const tp = this.tipoAtivo === 'silo' ? 'S' : 'A'
+        const vista = this.visaoAtiva === 'topo' ? 'T' : 'F'
+        return this.modelosBanco.filter(m => m.tp_svg === tp && m.vista_svg === vista)
+      },
+      
     modeloNome: {
       get() {
         return this.modeloArcoAtual ? this.modelosArcos[this.modeloArcoAtual]?.nome || '' : ''
@@ -1217,7 +1249,13 @@ export default {
         }
         // Carregar imagem do novo tipo
         this.imagemFundoData = { ...this.imagensFundoPorTipo[novoTipo] }
+        // Recarregar modelos do banco conforme novo tipo/vista
+        this.carregarModelosDoBanco()
       }
+    },
+    visaoAtiva(nova) {
+      // Recarregar modelos do banco ao trocar Topo/Lateral
+      this.carregarModelosDoBanco()
     },
     dados: {
       handler() {
@@ -1244,11 +1282,20 @@ export default {
         }
       },
       deep: true
+    },
+    // Ao selecionar modelo salvo, manter apenas o id (carregamento detalhado pode ser feito ao aplicar)
+    modeloSelecionadoMock() {
+      // Intencionalmente não altera fabricante/modelo pois backend não possui estes campos
+    },
+    // Ao voltar para criar novo, limpa seleção anterior
+    modoDadosSilo(novo) {
+      if (novo === 'criar') {
+        this.modeloSelecionadoMock = ''
+      }
     }
   },
   methods: {
     // Método para alternar seções do acordeon
-    toggleAcordeon(secao) {
       this.$set(this.acordeonAberto, secao, !this.acordeonAberto[secao])
     },
 
@@ -3561,7 +3608,12 @@ export default {
 
       this.carregandoModelosBanco = true
       try {
-        const response = await modeloSvgService.buscarModelos()
+        // Filtrar por tipo (S/A) e vista (T/F) conforme backend
+        const tp = this.tipoAtivo === 'silo' ? 'S' : 'A'
+        const vista = this.visaoAtiva === 'topo' ? 'T' : 'F'
+        const response = await (modeloSvgService.buscarModelosFiltrados
+          ? modeloSvgService.buscarModelosFiltrados(tp, vista)
+          : modeloSvgService.buscarModelos(tp))
 
         if (response && response.data) {
           this.modelosBanco = Array.isArray(response.data) ? response.data : []
@@ -6623,5 +6675,21 @@ input[type="range"]:hover::after,
     font-size: 1rem;
   }
 }
-</style>
+
+/* Toggle bonito para Editar/Criar com cores do tema */
+.modo-dados-toggle .btn {
+  border-color: #06335E;
+  color: #06335E;
+  font-weight: 600;
+}
+.modo-dados-toggle .btn:focus { box-shadow: none; }
+.modo-dados-toggle .btn-check:checked + .btn {
+  color: #fff;
+  background-color: #06335E;
+  border-color: #06335E;
+}
+.modo-dados-toggle .btn + .btn { margin-left: -1px; }
+.modo-dados-toggle .btn:first-of-type { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+.modo-dados-toggle .btn:last-of-type { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }</style>
+
 
