@@ -1,4 +1,18 @@
-import { jwtDecode } from 'jwt-decode'
+// Removido import de 'jwt-decode' e adicionado decoder local
+function jwtDecode(token) {
+  try {
+    if (!token || typeof token !== 'string') return null
+    const parts = token.split('.')
+    if (parts.length < 2) return null
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    // Decodifica Base64 com padding
+    const padded = b64 + '==='.slice((b64.length + 3) % 4)
+    const json = atob(padded)
+    return JSON.parse(json)
+  } catch (e) {
+    return null
+  }
+}
 
 export function verificarPerfilOperacao(cdParametros) {
    const token = localStorage.getItem('token') || null

@@ -209,7 +209,9 @@ export default {
     quantidadeModelosArcos: Number,
     modelosArcos: Object,
     configSilo: Object,
-    configArmazem: Object
+    configArmazem: Object,
+    // Layout do topo gerado/carregado pelo componente pai (ModeladorSVG)
+    layoutTopo: Object
   },
   emits: [
     'configuracao-carregada',
@@ -338,16 +340,28 @@ export default {
             return
           }
 
-          const response = await modeloSvgService.salvarModelo(dadosConsolidados.dados)
+          const response = await modeloSvgService.salvarOuAtualizarPorNmModeloEVista(dadosConsolidados.dados)
+ 
+           if (response.success) {
+            // Tentar salvar também a visão de Topo (vista T) usando layoutTopo
+            try {
+              const layoutTopoPayload = this.gerarPayloadTopoArmazem()
+               if (layoutTopoPayload) {
+                 await modeloSvgService.salvarOuAtualizarPorNmModeloEVista(layoutTopoPayload)
+               }
+            } catch (e) {
+              // Não bloquear o fluxo principal se topo falhar
+              console.warn('Falha ao salvar vista Topo:', e)
+            }
 
-          if (response.success) {
             await this.carregarConfiguracoesGerais()
 
             const idSalvo = response.data?.id_svg || response.data?.id || 'N/A'
             this.$emit('mostrar-toast',
               `🎉 Configuração "${this.nomeModelo}" salva no banco!\n\n` +
-              `🆔 ID: ${idSalvo}\n` +
+              `🆔 ID (Frontal): ${idSalvo}\n` +
               `📊 ${this.quantidadeModelosArcos} modelo(s) de arco consolidado(s)\n` +
+              `🗺️ Vista Topo salva (se disponível)\n` +
               `✅ Salvamento realizado com sucesso!\n\n` +
               `🔄 Sistema será resetado para valores padrão...`,
               'success'
@@ -384,15 +398,27 @@ export default {
             dado_svg: dadosCompletos
           }
 
-          const response = await modeloSvgService.salvarModelo(dadosParaBanco)
+          const response = await modeloSvgService.salvarOuAtualizarPorNmModeloEVista(dadosParaBanco)
+ 
+           if (response.success) {
+            // Tentar salvar também a visão de Topo (vista T) do silo
+            try {
+              const layoutTopoSiloPayload = this.gerarPayloadTopoSilo(dadosParaBanco)
+               if (layoutTopoSiloPayload) {
+                 await modeloSvgService.salvarOuAtualizarPorNmModeloEVista(layoutTopoSiloPayload)
+               }
+            } catch (e) {
+              // Não bloquear o fluxo principal se topo falhar
+              console.warn('Falha ao salvar vista Topo Silo:', e)
+            }
 
-          if (response.success) {
             await this.carregarConfiguracoesGerais()
 
             const idSalvo = response.data?.id_svg || response.data?.id || 'N/A'
             this.$emit('mostrar-toast',
               `🎉 Configuração do Silo "${this.nomeModelo}" salva!\n\n` +
               `🆔 ID: ${idSalvo}\n\n` +
+              `🗺️ Vista Topo salva (se disponível)\n` +
               `🔄 Sistema será resetado para valores padrão...`,
               'success'
             )
@@ -413,6 +439,165 @@ export default {
         this.$emit('mostrar-toast', `❌ Erro inesperado:\n\n${error.message || error}`, 'error')
       } finally {
         this.isSalvando = false
+      }
+    },
+
+    // Gera payload da vista Topo do armazém para salvar no banco
+    gerarPayloadTopoArmazem() {
+      try {
+        // Usar layoutTopo vindo como prop se disponível, senão gerar um básico
+        const layoutTopo = this.layoutTopo || this.gerarLayoutTopoLocal()
+        if (!layoutTopo || !layoutTopo.celulas) return null
+
+        const larguraSVG = (this.$parent && this.$parent.larguraSVG) ? this.$parent.larguraSVG : 800
+        const alturaSVG = (this.$parent && this.$parent.alturaSVG) ? this.$parent.alturaSVG : 400
+
+        const dadosTopo = {
+          versao: '1.0',
+          tipo: 'armazem_topo_layout_v1',
+          quantidadeModelos: this.quantidadeModelosArcos,
+          configuracaoGlobal: { ...(this.configArmazem || {}) },
+          dimensoesSVG: { largura: larguraSVG, altura: alturaSVG },
+          layout_topo: layoutTopo,
+          timestamp: Date.now()
+        }
+
+        return {
+          nm_modelo: this.nomeModelo,
+          tp_svg: 'A',
+          vista_svg: 'T',
+          ds_modelo: this.descricaoModelo || `Layout Topo Armazém - ${new Date().toLocaleDateString('pt-BR')}`,
+          dado_svg: dadosTopo
+        }
+      } catch (error) {
+        console.warn('Erro ao gerar payload topo:', error)
+        return null
+      }
+    },
+
+    // Gera payload da vista Topo do silo para salvar no banco
+    gerarPayloadTopoSilo(modeloFrenteSalvo) {
+      try {
+        // Dimensões padrão do Topo do Silo, conforme componente TopoView/SiloTopoSvg
+        const dimensoesTopoPadrao = {
+          largura: 138,
+          altura: 134,
+          centroX: 68.7343,
+          centroY: 66.5965,
+          raio: 65.75
+        }
+
+        const larguraSVG = (this.$parent && this.$parent.larguraSVG) ? this.$parent.larguraSVG : dimensoesTopoPadrao.largura
+        const alturaSVG = (this.$parent && this.$parent.alturaSVG) ? this.$parent.alturaSVG : dimensoesTopoPadrao.altura
+
+        // Posições manuais de pêndulos do topo vindas do ModeladorSVG
+        const posicoesManualPendulos = (this.$parent && this.$parent.posicoesManualPendulos) ? this.$parent.posicoesManualPendulos : {}
+
+        // Metadados básicos do silo
+        const quantidadePendulos = (modeloFrenteSalvo && modeloFrenteSalvo.dado_svg && modeloFrenteSalvo.dado_svg.quantidadePendulos)
+          ? modeloFrenteSalvo.dado_svg.quantidadePendulos
+          : (this.configSilo && this.configSilo.quantidadePendulos) ? this.configSilo.quantidadePendulos : 3
+
+        const sensoresPorPendulo = (modeloFrenteSalvo && modeloFrenteSalvo.dado_svg && modeloFrenteSalvo.dado_svg.sensoresPorPendulo)
+          ? modeloFrenteSalvo.dado_svg.sensoresPorPendulo
+          : (this.configSilo && this.configSilo.sensoresPorPendulo) ? this.configSilo.sensoresPorPendulo : {}
+
+        const tipoCaboPendulo = (this.configSilo && this.configSilo.tipoCaboPendulo) ? this.configSilo.tipoCaboPendulo : 'simples'
+
+        // Regras de distribuição e controles do topo
+        const regrasDistribuicao = {
+          tipoPosicaoPendulo: (this.configSilo && this.configSilo.tipoPosicaoPendulo) ? this.configSilo.tipoPosicaoPendulo : { central: [], intermediario: [], lateral: [] },
+          rotacaoFundo: (this.configSilo && this.configSilo.rotacaoFundo) ? this.configSilo.rotacaoFundo : 0,
+          rotacaoPendulos: (this.configSilo && this.configSilo.rotacaoPendulos) ? this.configSilo.rotacaoPendulos : 0,
+          afastamentoLateral: (this.configSilo && this.configSilo.afastamentoLateral) ? this.configSilo.afastamentoLateral : 0,
+          afastamentoCentral: (this.configSilo && this.configSilo.afastamentoCentral) ? this.configSilo.afastamentoCentral : 0,
+          afastamentoIntermediario: (this.configSilo && this.configSilo.afastamentoIntermediario) ? this.configSilo.afastamentoIntermediario : 0,
+        }
+
+        const controlesTopo = {
+          tamanhoCirculoPendulo: (this.configSilo && this.configSilo.tamanhoCirculoPendulo) ? this.configSilo.tamanhoCirculoPendulo : 6,
+          espessuraBordaCirculo: (this.configSilo && this.configSilo.espessuraBordaCirculo) ? this.configSilo.espessuraBordaCirculo : 2,
+        }
+
+        const dadosTopoSilo = {
+          versao: '1.0',
+          tipo: 'silo_topo_layout_v1',
+          quantidadeModelos: 1,
+          configuracaoGlobal: { ...(this.configSilo || {}) },
+          dimensoesSVG: { largura: larguraSVG, altura: alturaSVG, ...dimensoesTopoPadrao },
+          meta: { quantidadePendulos, sensoresPorPendulo, tipoCaboPendulo },
+          regrasDistribuicao,
+          controlesTopo,
+          posicoesManualPendulos,
+          timestamp: Date.now()
+        }
+
+        return {
+          nm_modelo: this.nomeModelo,
+          tp_svg: 'S',
+          vista_svg: 'T',
+          ds_modelo: this.descricaoModelo || `Layout Topo Silo - ${new Date().toLocaleDateString('pt-BR')}`,
+          dado_svg: dadosTopoSilo
+        }
+      } catch (error) {
+        console.warn('Erro ao gerar payload topo silo:', error)
+        return null
+      }
+    },
+
+    // Fallback local para gerar layout_topo simples caso não seja fornecido
+    gerarLayoutTopoLocal() {
+      try {
+        const larguraSVG = (this.$parent && this.$parent.larguraSVG) ? this.$parent.larguraSVG : 800
+        const alturaSVG = (this.$parent && this.$parent.alturaSVG) ? this.$parent.alturaSVG : 400
+        const numeroCelulas = 3
+
+        const layout = {
+          celulas: {
+            tamanho_svg: [larguraSVG, alturaSVG],
+            fundo: [0, 0, Math.max(larguraSVG, 590), alturaSVG]
+          },
+          aeradores: {}
+        }
+
+        const larguraUtil = layout.celulas.fundo[2]
+        const larguraPorCelula = Math.floor(larguraUtil / numeroCelulas)
+        for (let i = 1; i <= numeroCelulas; i++) {
+          const xInicio = (i - 1) * larguraPorCelula
+          const largura = i === numeroCelulas ? (larguraUtil) - xInicio : larguraPorCelula
+          layout.celulas[i] = [xInicio, 0, largura, alturaSVG]
+        }
+
+        const arcoKeys = Object.keys(this.modelosArcos || {})
+        const totalArcos = arcoKeys.length || this.quantidadeModelosArcos || 1
+        arcoKeys.forEach(k => {
+          const arcoIndex = parseInt(k) - 1
+          const qtdPendulos = (this.modelosArcos[k]?.quantidadePendulos) || 0
+          if (qtdPendulos <= 0) return
+
+          const celula = Math.min(numeroCelulas, Math.floor((arcoIndex * numeroCelulas) / Math.max(totalArcos, 1)) + 1)
+          const celData = layout.celulas[celula]
+          const celX = celData[0]
+          const celW = celData[2]
+          const espacamentoX = celW / (qtdPendulos + 1)
+
+          layout[k] = {
+            celula,
+            pos_x: celX + espacamentoX,
+            sensores: {}
+          }
+
+          for (let i = 1; i <= qtdPendulos; i++) {
+            const x = celX + espacamentoX * i
+            const y = Math.floor(alturaSVG * 0.5)
+            layout[k].pos_x = x
+            layout[k].sensores[i] = y
+          }
+        })
+
+        return layout
+      } catch (e) {
+        return null
       }
     },
 
@@ -1358,3 +1543,4 @@ export default {
   color: #ffc107 !important;
 }
 </style>
+

@@ -21,6 +21,12 @@
     }"
     preserveAspectRatio="xMidYMid meet"
   >
+    <!-- Definições: clip-path do interior do silo para alinhar a base às bordas -->
+    <defs>
+      <clipPath :id="clipIdSilo" clipPathUnits="userSpaceOnUse">
+        <polygon :points="pontosSilo" />
+      </clipPath>
+    </defs>
     <!-- Estrutura do Silo -->
     <g :transform="transformSilo" :style="{ opacity: opacidadesSvg.estrutura }">
       <!-- Corpo do silo (polígono) -->
@@ -29,25 +35,52 @@
       <!-- Tampa superior -->
       <path
         fill="#999999"
-        d="M71.6612 0.7892c-22.3726,7.3556 -44.7452,14.711 -67.1178,22.0666 -2.8377,0.9516 -4.5433,2.0295 -4.5433,3.0972 0,1.2723 2.1973,2.4833 6.1583,3.5826l65.1098 -26.4989c2.7618,-1.1944 5.9842,-1.6696 9.8636,0l65.35 26.5966c3.6894,-1.0265 5.9182,-2.2416 5.9182,-3.6803 0,-1.0677 -1.7056,-2.1456 -4.5433,-3.0972 -22.3726,-7.3556 -44.7453,-14.711 -67.1179,-22.0666 -2.9444,-1.0554 -5.9663,-1.0486 -9.0776,0z"
+        :d="dTampaSuperior"
         :transform="`scale(${config.lb / 152}, ${config.hb / 15})`"
       />
 
-      <!-- Base elíptica -->
-      <ellipse
-        fill="#999999"
-        :cx="config.lb / 2"
-        :cy="config.hs"
-        :rx="config.lb / 2"
-        :ry="config.hb"
-      />
-      <ellipse
-        fill="#CCCCCC"
-        :cx="config.lb / 2"
-        :cy="config.hs - config.eb"
-        :rx="config.lb / 2"
-        :ry="config.hb"
-      />
+      <!-- Base: elíptica (reto) ou V espelhado -->
+      <template v-if="config.formato_nivel_inferior !== 'v'">
+        <!-- Base RETA (elipse) sem recorte: mantém o fundo redondo visível -->
+        <ellipse
+          fill="#999999"
+          :cx="config.lb / 2"
+          :cy="config.hs"
+          :rx="config.lb / 2"
+          :ry="config.hb"
+        />
+        <ellipse
+          fill="#CCCCCC"
+          :cx="config.lb / 2"
+          :cy="config.hs - config.eb"
+          :rx="config.lb / 2"
+          :ry="config.hb"
+        />
+      </template>
+      <template v-else>
+        <!-- Base em V com recorte e fundo interno para disfarçar -->
+        <g :clip-path="`url(#${clipIdSilo})`">
+          <!-- Fundo interno para disfarçar os cantos laterais -->
+          <rect
+            :x="0"
+            :y="config.hs - config.hb * 1.4"
+            :width="config.lb"
+            :height="offsetVBase + config.hb * 2 + espessuraV"
+            fill="#E7E7E7"
+          />
+          <!-- Clona o topo e aplica matriz para espelhar e posicionar na base, recortado pelo interior do silo -->
+          <path
+            fill="#999999"
+            :d="dTampaSuperior"
+            :transform="`matrix(${config.lb / 152},0,0,${-escalaV},0,${config.hs + offsetVBase - espessuraV})`"
+          />
+          <path
+            fill="#CCCCCC"
+            :d="dTampaSuperior"
+            :transform="`matrix(${config.lb / 152},0,0,${-escalaV},0,${config.hs + offsetVBase - config.eb})`"
+          />
+        </g>
+      </template>
     </g>
 
     <!-- Aeradores (se ativo) -->
@@ -57,6 +90,16 @@
     <g :style="{ opacity: opacidadesSvg.pendulos }">
       <g :transform="transformSilo">
         <g v-for="p in quantidadePendulos" :key="`pendulo_${p}`">
+          <!-- Área de clique ampla para arrastar o cabo -->
+          <rect
+            :x="calcularPosicaoXPendulo(p) - escalaSensores"
+            :y="0"
+            :width="escalaSensores * 2"
+            :height="alturaSVG"
+            fill="transparent"
+            style="cursor: ns-resize; pointer-events: all;"
+            @mousedown="iniciarDragPendulo($event, p)"
+          />
           <!-- Pêndulo -->
           <rect
             :id="`PenduloSilo_${p}`"
@@ -140,7 +183,7 @@
     </g>
 
     <!-- Elementos da Visão Topo (Círculos) -->
-    <g v-if="isVisaoTopoAtiva" :transform="`translate(${config.lb / 2}, ${config.hs / 2})`">
+    <g v-if="isVisaoTopoAtiva" :transform="`translate(${config.lb / 2}, ${config.hs / 2})`" :style="{ pointerEvents: 'none' }">
       <circle
         v-for="(circulo, index) in circulosTopo"
         :key="index"
@@ -169,6 +212,7 @@ export default {
         hs: 180,
         hb: 15,
         eb: 2,
+        formato_nivel_inferior: 'reto',
         escala_sensores: 16,
         dist_y_sensores: 12,
         aeradores_ativo: false,
@@ -216,11 +260,18 @@ export default {
     }
   },
   computed: {
+    dTampaSuperior() {
+      // Caminho usado para a tampa superior e para espelhar na base em V
+      return "M71.6612 0.7892c-22.3726,7.3556 -44.7452,14.711 -67.1178,22.0666 -2.8377,0.9516 -4.5433,2.0295 -4.5433,3.0972 0,1.2723 2.1973,2.4833 6.1583,3.5826l65.1098 -26.4989c2.7618,-1.1944 5.9842,-1.6696 9.8636,0l65.35 26.5966c3.6894,-1.0265 5.9182,-2.2416 5.9182,-3.6803 0,-1.0677 -1.7056,-2.1456 -4.5433,-3.0972 -22.3726,-7.3556 -44.7453,-14.711 -67.1179,-22.0666 -2.9444,-1.0554 -5.9663,-1.0486 -9.0776,0z"
+    },
     larguraSVG() {
       return this.config.lb + (this.config.aeradores_ativo ? this.config.ds * 2 + 68 : 0)
     },
     alturaSVG() {
-      return this.config.hs + this.config.hb * 1.75 + 80
+      // Ajusta a altura total: inclui a extensão da ponta V quando ativa
+      const baseAltura = this.config.hs + this.config.hb * 1.75
+      const extraV = this.config.formato_nivel_inferior === 'v' ? this.offsetVBase : 0
+      return baseAltura + extraV + 20
     },
     pontosSilo() {
       const { lb, hs, hb } = this.config
@@ -229,6 +280,10 @@ export default {
       const p3 = [lb, hb * 1.75]
       const p4 = [lb / 2, 0]
       const p5 = [0, hb * 1.75]
+      if (this.config.formato_nivel_inferior === 'v') {
+        const pTip = [lb / 2, hs + this.offsetVBase]
+        return `${p1[0]},${p1[1]} ${pTip[0]},${pTip[1]} ${p2[0]},${p2[1]} ${p3[0]},${p3[1]} ${p4[0]},${p4[1]} ${p5[0]},${p5[1]}`
+      }
       return `${p1[0]},${p1[1]} ${p2[0]},${p2[1]} ${p3[0]},${p3[1]} ${p4[0]},${p4[1]} ${p5[0]},${p5[1]}`
     },
     transformSilo() {
@@ -236,6 +291,14 @@ export default {
     },
     quantidadePendulos() {
       return this.config.quantidadePendulos || 5
+    },
+    ordemRenderizada() {
+      const q = this.quantidadePendulos
+      const base = Array.from({ length: q }, (_, i) => i + 1)
+      const ord = Array.isArray(this.config.ordemPendulos) && this.config.ordemPendulos.length === q
+        ? this.config.ordemPendulos
+        : base
+      return ord
     },
     escalaSensores() {
       return this.config.escala_sensores || 16
@@ -251,6 +314,30 @@ export default {
     },
     bordaFina() {
       return 0.6
+    },
+    clipIdSilo() {
+      // ID único para o clip-path do interior do silo
+      return `clip-silo-interior-${this._uid}`
+    },
+    espessuraV() {
+      const custom = this.config.espessura_v
+      if (typeof custom === 'number' && !Number.isNaN(custom)) return custom
+      return Math.max(2, Math.round(this.config.hb * 0.25))
+    },
+    offsetVBase() {
+      // Deslocamento vertical adicional para posicionar o V mais baixo.
+      // Usa valor configurável, ou um padrão proporcional à altura da borda (hb).
+      const custom = this.config.deslocamento_v_base
+      if (typeof custom === 'number' && !Number.isNaN(custom)) return custom
+      return Math.round(this.config.hb * 1.2)
+    },
+    // Altura nominal do path da tampa superior (sem escala), usada para calibrar a escala do V
+    alturaTopoPath() {
+      return 26.6
+    },
+    // Escala vertical do V para atingir exatamente o deslocamento desejado (offsetVBase)
+    escalaV() {
+      return this.offsetVBase / this.alturaTopoPath
     }
   },
   data() {
@@ -278,7 +365,9 @@ export default {
         return lb / 2
       } else {
         const espacamento = larguraUtil / (this.quantidadePendulos - 1)
-        return margemLateral + ((numeroPendulo - 1) * espacamento)
+        // posição visual é baseada no índice dentro da ordem renderizada
+        const idx = Math.max(0, this.ordemRenderizada.indexOf(numeroPendulo))
+        return margemLateral + (idx * espacamento)
       }
     },
     calcularPosicaoYSensor(numeroSensor, pendulo) {
@@ -438,22 +527,33 @@ export default {
       this.isDraggingPendulo = true;
       this.penduloArrastando = penduloId;
       
-      const rectSVG = this.$el.getBoundingClientRect();
+      const svg = this.$el;
+      const pt = svg.createSVGPoint();
+      pt.x = event.clientX;
+      pt.y = event.clientY;
+      const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+      
       const posicaoAtual = this.posicoesManuaisYPendulos[penduloId] || this.yPendulo;
-      this.offsetYInicial = event.clientY - rectSVG.top - posicaoAtual;
+      this.offsetYInicial = svgP.y - posicaoAtual;
       
       document.body.style.cursor = 'ns-resize';
     },
     handleDragPendulo(event) {
       if (!this.isDraggingPendulo) return;
 
-      const rectSVG = this.$el.getBoundingClientRect();
-      const mouseY = event.clientY - rectSVG.top;
-      const novaPosicaoY = mouseY - this.offsetYInicial;
+      const svg = this.$el;
+      const pt = svg.createSVGPoint();
+      pt.x = event.clientX;
+      pt.y = event.clientY;
+      const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+      
+      const novaPosicaoY = svgP.y - this.offsetYInicial;
 
-      // Limitar movimento vertical dentro do SVG
-      const limiteSuperior = 20; // Margem superior
-      const limiteInferior = this.alturaSVG - 40; // Margem inferior
+      // Limitar movimento vertical dentro do SVG (corrigido)
+      const margemTopo = 5;
+      const margemBase = 5;
+      const limiteSuperior = margemTopo;
+      const limiteInferior = this.alturaSVG - margemBase;
 
       const posicaoYFinal = Math.max(limiteSuperior, Math.min(novaPosicaoY, limiteInferior));
 
@@ -482,12 +582,14 @@ export default {
       this.isDraggingSensor = true;
       this.sensorArrastando = { pendulo: penduloId, sensor: sensorId };
       
-      const rectSVG = this.$el.getBoundingClientRect();
-      const chaveSensor = `${penduloId}-${sensorId}`;
-      const offsetAtual = this.posicoesManuaisYSensores[chaveSensor] || 0;
-      const posicaoCalculada = this.calcularPosicaoYSensor(sensorId, penduloId);
+      const svg = this.$el;
+      const pt = svg.createSVGPoint();
+      pt.x = event.clientX;
+      pt.y = event.clientY;
+      const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
       
-      this.offsetYInicial = event.clientY - rectSVG.top - posicaoCalculada;
+      const posicaoCalculada = this.calcularPosicaoYSensor(sensorId, penduloId);
+      this.offsetYInicial = svgP.y - posicaoCalculada;
       
       document.body.style.cursor = 'ns-resize';
     },
@@ -497,15 +599,18 @@ export default {
       const { pendulo, sensor } = this.sensorArrastando;
       const chaveSensor = `${pendulo}-${sensor}`;
       
-      const rectSVG = this.$el.getBoundingClientRect();
-      const mouseY = event.clientY - rectSVG.top;
+      const svg = this.$el;
+      const pt = svg.createSVGPoint();
+      pt.x = event.clientX;
+      pt.y = event.clientY;
+      const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
       
       // Calcular posição base do sensor (sem offset manual)
       const yPenduloBase = this.posicoesManuaisYPendulos[pendulo] || this.yPendulo;
       const posicaoBaseY = yPenduloBase - this.distYSensores * sensor - 25;
       
       // Calcular novo offset baseado na diferença
-      const novaPosicaoY = mouseY - this.offsetYInicial;
+      const novaPosicaoY = svgP.y - this.offsetYInicial;
       const novoOffset = novaPosicaoY - posicaoBaseY;
       
       // Limitar o offset para evitar que o sensor saia muito da posição

@@ -750,6 +750,87 @@ export default {
         });
       }
 
+      // Calcular níveis (altura com grão) por cabo e interpolar cabos com erro
+      const niveisPorCabo = {};
+      const cabosComErro = [];
+
+      if (this.dadosLocal?.leitura) {
+        Object.entries(this.dadosLocal.leitura).forEach(([_, sensoresData], penduloIndex) => {
+          const xCabo = layoutArco.desenho_sensores.pos_x_cabo[penduloIndex] + 8;
+          const yCabo = this.dimensoesSVG.altura - 50 + 15;
+
+          let nivelMaisAltoNesteCabo = 0;
+
+          const sensoresComErro = Object.values(sensoresData).filter(dados => {
+            if (!Array.isArray(dados) || dados.length < 5) return true;
+            const [temp, , , falha] = dados;
+            return parseFloat(temp) === 0 || falha === true;
+          });
+
+          const caboComErro = sensoresComErro.length === Object.keys(sensoresData).length;
+
+          if (!caboComErro) {
+            Object.entries(sensoresData).forEach(([sensorKey, dados]) => {
+              if (!Array.isArray(dados) || dados.length < 5) return;
+              const s = parseInt(sensorKey);
+              const [temp, , , falha, nivel] = dados;
+              const ySensor = yCabo - 12 * s - 25;
+              if (nivel && temp !== -1000 && temp !== 0 && !falha) {
+                if (ySensor < nivelMaisAltoNesteCabo || nivelMaisAltoNesteCabo === 0) {
+                  nivelMaisAltoNesteCabo = ySensor;
+                }
+              }
+            });
+
+            if (nivelMaisAltoNesteCabo !== 0) {
+              niveisPorCabo[xCabo] = nivelMaisAltoNesteCabo;
+            }
+          } else {
+            cabosComErro.push({ xCabo, penduloIndex });
+          }
+        });
+      }
+
+      if (cabosComErro.length > 0) {
+        const cabosOrdenados = Object.keys(niveisPorCabo)
+          .map(x => ({ x: parseFloat(x), nivel: niveisPorCabo[x] }))
+          .sort((a, b) => a.x - b.x);
+
+        cabosComErro.forEach(({ xCabo }) => {
+          let nivelInterpolado = 0;
+          if (cabosOrdenados.length >= 2) {
+            let caboAnterior = null;
+            let caboPosterior = null;
+            for (let i = 0; i < cabosOrdenados.length; i++) {
+              if (cabosOrdenados[i].x < xCabo) {
+                caboAnterior = cabosOrdenados[i];
+              }
+              if (cabosOrdenados[i].x > xCabo && !caboPosterior) {
+                caboPosterior = cabosOrdenados[i];
+                break;
+              }
+            }
+
+            if (caboAnterior && caboPosterior) {
+              const distTotal = caboPosterior.x - caboAnterior.x;
+              const distAtual = xCabo - caboAnterior.x;
+              const fator = distTotal === 0 ? 0 : distAtual / distTotal;
+              nivelInterpolado = caboAnterior.nivel + (caboPosterior.nivel - caboAnterior.nivel) * fator;
+            } else if (caboAnterior) {
+              nivelInterpolado = caboAnterior.nivel;
+            } else if (caboPosterior) {
+              nivelInterpolado = caboPosterior.nivel;
+            }
+          } else if (cabosOrdenados.length === 1) {
+            nivelInterpolado = cabosOrdenados[0].nivel;
+          }
+
+          if (nivelInterpolado !== 0) {
+            niveisPorCabo[xCabo] = nivelInterpolado;
+          }
+        });
+      }
+
 
       // Função IDW para interpolação
       const idw = (cx, cy) => {
@@ -810,14 +891,65 @@ export default {
       g.setAttribute("filter", "url(#blurFilterArmazem)");
       g.setAttribute("clip-path", "url(#clipArmazem)");
 
+      // Funções auxiliares para restringir o mapa térmico à área com nível
+      const temGraoNaPosicao = (cx, cy) => {
+        const cabosOrdenados = Object.keys(niveisPorCabo)
+          .map(x => ({ x: parseFloat(x), nivel: niveisPorCabo[x] }))
+          .sort((a, b) => a.x - b.x);
+        if (cabosOrdenados.length === 0) return false;
+        let nivelInterpolado = 0;
+        if (cabosOrdenados.length === 1) {
+          nivelInterpolado = cabosOrdenados[0].nivel;
+        } else {
+          // Descobrir par de cabos que "cercam" cx
+          let caboEsquerda = cabosOrdenados[0];
+          let caboDireita = cabosOrdenados[cabosOrdenados.length - 1];
+          for (let i = 0; i < cabosOrdenados.length - 1; i++) {
+            if (cx >= cabosOrdenados[i].x && cx <= cabosOrdenados[i + 1].x) {
+              caboEsquerda = cabosOrdenados[i];
+              caboDireita = cabosOrdenados[i + 1];
+              break;
+            }
+          }
+
+          if (cx < cabosOrdenados[0].x) {
+            // Extrapolar usando os dois primeiros cabos para evitar "buracos" nas laterais
+            const c0 = cabosOrdenados[0];
+            const c1 = cabosOrdenados[1];
+            const distTotal = c1.x - c0.x;
+            const slope = distTotal === 0 ? 0 : (c1.nivel - c0.nivel) / distTotal;
+            nivelInterpolado = c0.nivel + slope * (cx - c0.x);
+          } else if (cx > cabosOrdenados[cabosOrdenados.length - 1].x) {
+            // Extrapolar usando os dois últimos cabos
+            const cN1 = cabosOrdenados[cabosOrdenados.length - 2];
+            const cN = cabosOrdenados[cabosOrdenados.length - 1];
+            const distTotal = cN.x - cN1.x;
+            const slope = distTotal === 0 ? 0 : (cN.nivel - cN1.nivel) / distTotal;
+            nivelInterpolado = cN.nivel + slope * (cx - cN.x);
+          } else {
+            // Interpolar entre os cabos vizinhos
+            const distTotal = caboDireita.x - caboEsquerda.x;
+            const distAtual = cx - caboEsquerda.x;
+            const fator = distTotal === 0 ? 0 : distAtual / distTotal;
+            nivelInterpolado = caboEsquerda.nivel + (caboDireita.nivel - caboEsquerda.nivel) * fator;
+          }
+        }
+        if (nivelInterpolado === 0) return false;
+        const margemSeguranca = 15;
+        return cy >= nivelInterpolado - margemSeguranca && cy <= pb;
+      };
+
       for (let i = 0; i < resolucao; i++) {
         for (let j = 0; j < resolucao; j++) {
           const cx = i * wCell + wCell / 2;
           const cy = j * hCell + hCell / 2;
-          const tempInterpolada = idw(cx, cy);
-          
-          // Se não há interpolação, usar cor de fundo
-          const cor = tempInterpolada === null ? "#ffffff" : this.corFaixaExata(tempInterpolada);
+          let cor;
+          if (temGraoNaPosicao(cx, cy)) {
+            const tempInterpolada = idw(cx, cy);
+            cor = tempInterpolada === null ? "#e7e7e7" : this.corFaixaExata(tempInterpolada);
+          } else {
+            cor = "#e7e7e7";
+          }
 
           const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
           rect.setAttribute("x", i * wCell);

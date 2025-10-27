@@ -1,6 +1,7 @@
 <template>
   <div class="container-fluid p-0" :style="{
-    height: '100vh',
+    // Evitar ocupar toda a altura da janela para reduzir áreas vazias externas
+    height: 'auto',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -9,7 +10,8 @@
     <div class="card" :style="{
       maxWidth: '90vw',
       maxHeight: '90vh',
-      minHeight: '500px',
+      // Diminuir minHeight para evitar espaço grande sobrando
+      minHeight: '350px',
       width: '100%'
     }">
       <!-- Header com controles -->
@@ -52,7 +54,7 @@
                 v-if="modeloCarregado"
                 @click="salvarModeloNoServidor"
                 class="btn btn-sm" style="background-color: #06335E; color: white;"
-                title="Salvar alterações no servidor">
+                title="Salvar etapa localmente (banco apenas na última etapa)">
                 <i class="fa fa-save"></i> Salvar
               </button>
             </div>
@@ -113,8 +115,10 @@
 
       <!-- Área do SVG (Componente Filho) -->
       <div class="card-body text-center d-flex align-items-center justify-content-center p-3" :style="{
-        height: 'calc(90vh - 120px)',
-        minHeight: '400px'
+        // Remover altura fixa para evitar espaço grande abaixo do conteúdo
+        height: 'auto',
+        minHeight: '300px',
+        maxHeight: 'calc(100vh - 220px)'
       }">
         <ArmazemSvg
           :config="configArmazemParaComponente"
@@ -1140,8 +1144,8 @@ export default {
       config.timestampPosicoesCabos = Date.now()
       config.posicionamentoPersonalizado = true // Flag para indicar que foi personalizado
 
-      // Salvar no servidor após cada alteração (com fallback para localStorage)
-      this.salvarModeloNoServidor()
+      // Salvar localmente a etapa; banco apenas na última etapa
+      this.salvarPosicionamentoLocalStorage()
 
 
       // Forçar atualização reativa do Vue
@@ -1152,36 +1156,12 @@ export default {
       if (!this.modeloCarregado || !this.modelosCarregados) return
 
       try {
-        const dadosCompletos = this.construirDadosCompletos()
-
-        // Estrutura para salvar no servidor
-        const modeloParaSalvar = {
-          nm_modelo: this.modeloCarregado.nome,
-          tp_svg: 'A', // Armazém
-          vista_svg: 'F', // Frontal
-          ds_modelo: `Modelo atualizado em ${new Date().toLocaleDateString('pt-BR')}`,
-          dado_svg: JSON.stringify(dadosCompletos)
-        }
-
-        // Se já temos um ID do modelo selecionado, incluir para forçar atualização
-        if (this.modeloSelecionado) {
-          modeloParaSalvar.id_svg = this.modeloSelecionado
-        }
-
-
-        const resultado = await modeloSvgService.salvarModelo(modeloParaSalvar)
-
-        if (resultado.success) {
-          this.mostrarToast(`Modelo "${this.modeloCarregado.nome}" salvo com sucesso no servidor!`, 'success')
-        } else {
-          throw new Error(resultado.message || 'Erro desconhecido ao salvar')
-        }
-
-      } catch (error) {
-        console.error('❌ [SERVIDOR] Erro ao salvar modelo:', error)
-        this.mostrarToast(`Erro ao salvar no servidor: ${error.message}`, 'error')
-        // Fallback para localStorage
+        // Persistir apenas localmente nesta etapa; banco apenas na última etapa
         this.salvarPosicionamentoLocalStorage()
+        this.mostrarToast('Etapa salva localmente. O banco será atualizado apenas na última etapa.', 'info')
+      } catch (error) {
+        console.error('❌ [LOCAL] Erro ao salvar etapa local:', error)
+        this.mostrarToast(`Erro ao salvar etapa local: ${error.message}`, 'error')
       }
     },
 

@@ -181,6 +181,13 @@ export default {
     quantidadePendulos() {
       return this.config?.quantidadePendulos || 5
     },
+    // Novos parâmetros para distribuição automática
+    numeroCelulas() {
+      return this.config?.numeroCelulas || this.config?.totalCelulas || 0
+    },
+    totalArcosTopo() {
+      return this.config?.totalArcos || this.config?.quantidadeArcos || 0
+    },
     fundoTransform() {
       // Aplicar rotação do fundo ao redor do centro
       const rotacao = this.config?.rotacaoFundo || 0
@@ -191,6 +198,11 @@ export default {
       return this.config?.afastamentoPendulos || 1.0
     },
     pendulosComPosicao() {
+      // Distribuição automática por células/arcos quando configurada
+      if (this.numeroCelulas >= 1 && this.totalArcosTopo >= 1 && this.quantidadePendulos >= 1) {
+        return this.calcularPendulosDistribuidosPorCelulasArcos()
+      }
+
       const pendulos = []
 
       // 🎯 LÓGICA DE AGRUPAMENTO POR TIPO DE POSIÇÃO
@@ -350,6 +362,79 @@ export default {
       }
 
       return this.polarParaRetangular(raio, anguloFinal, nivel)
+    },
+
+    // NOVO: Distribuição automática por células e arcos
+    calcularPendulosDistribuidosPorCelulasArcos() {
+      const nCel = Math.min(3, Math.max(1, this.numeroCelulas || 0))
+      const nArcos = this.totalArcosTopo
+      const nPend = this.quantidadePendulos
+
+      if (nArcos <= 0 || nPend <= 0) return []
+
+      const baseArcosPerCell = Math.floor(nArcos / nCel)
+      const remainderArcos = nArcos % nCel
+      const arcosPorCelula = Array.from({ length: nCel }, (_, i) => baseArcosPerCell + (i < remainderArcos ? 1 : 0))
+
+      const arcoAssignments = []
+      let arcIndex = 0
+      for (let c = 1; c <= nCel; c++) {
+        for (let k = 0; k < arcosPorCelula[c - 1]; k++) {
+          arcoAssignments.push({ cell: c, arcGlobalIndex: arcIndex++ })
+        }
+      }
+
+      const basePendPerArc = Math.floor(nPend / nArcos)
+      const remainderPend = nPend % nArcos
+      const pendulosPorArco = Array.from({ length: nArcos }, (_, i) => basePendPerArc + (i < remainderPend ? 1 : 0))
+
+      const angleSegment = 360 / nArcos
+      const pendulos = []
+      let label = 1
+
+      for (let a = 0; a < nArcos; a++) {
+        const cell = arcoAssignments[a]?.cell || 1
+        const nPA = pendulosPorArco[a]
+        for (let k = 0; k < nPA && label <= nPend; k++) {
+          const angleInside = angleSegment * ((k + 1) / (nPA + 1))
+          const angle = a * angleSegment + angleInside
+          const nivel = cell === 1 ? 'central' : (cell === 2 ? 'intermediario' : 'lateral')
+          const raio = this.getRaioPorCelula(cell)
+
+          let transform = this.polarParaRetangular(raio, angle, nivel)
+          if (this.posicoesManualPendulos[label]) {
+            transform = `translate(${this.posicoesManualPendulos[label].x},${this.posicoesManualPendulos[label].y})`
+          }
+
+          pendulos.push({
+            label,
+            transform,
+            nivel,
+            tipoPosicao: nivel
+          })
+
+          label++
+        }
+      }
+
+      return pendulos
+    },
+
+    getRaioPorCelula(celula) {
+      let raioBase
+      let multiplicador = 1.0
+
+      if (celula === 1) {
+        raioBase = 15
+        multiplicador = this.config?.afastamentoCentral || 1.0
+      } else if (celula === 2) {
+        raioBase = 37
+        multiplicador = this.config?.afastamentoIntermediario || 1.0
+      } else {
+        raioBase = 55
+        multiplicador = this.config?.afastamentoLateral || 1.0
+      }
+      return raioBase * multiplicador
     },
 
     polarParaRetangular(raio, angulo, nivel = null) {

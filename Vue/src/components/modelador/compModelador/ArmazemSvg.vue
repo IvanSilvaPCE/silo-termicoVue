@@ -156,8 +156,9 @@ export default {
         width: '100%',
         height: 'auto',
         maxWidth: '100%',
-        maxHeight: this.isMobile ? '50vh' : '500px',
-        minHeight: this.isMobile ? '200px' : '250px',
+        // Aumentar levemente a altura máxima para melhorar a visualização (+200px desktop)
+        maxHeight: this.isMobile ? '70vh' : '950px',
+        minHeight: this.isMobile ? '220px' : '300px',
         border: '1px solid #ddd',
         backgroundColor: '#f8f9fa',
         borderRadius: '4px',
@@ -177,7 +178,8 @@ export default {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px 10px'
+        // Reduzir padding para diminuir espaço extra ao redor do SVG
+        padding: '10px 8px'
       }
     },
 
@@ -186,7 +188,8 @@ export default {
         width: '100%',
         height: 'auto',
         maxWidth: '100%',
-        maxHeight: this.isMobile ? '50vh' : '500px',
+        // Mesmo ajuste aqui para manter consistência (+200px desktop)
+        maxHeight: this.isMobile ? '70vh' : '950px',
         border: '1px solid #ddd',
         backgroundColor: 'transparent',
         borderRadius: '4px',
@@ -342,7 +345,8 @@ export default {
 
       // 🔧 CORRIGIDO: Altura natural sem ajustes arbitrários para alinhamento com ModeladorSVG
       const margemTopo = 25
-      const margemBase = 15
+      // Reduzir margem inferior para evitar espaço sobrando abaixo dos pêndulos
+      const margemBase = 5
       const alturaTotal = margemTopo + alturaTelho + alturaCorpo + extensaoFundo + espacoSensores + margemBase
 
 
@@ -897,7 +901,8 @@ export default {
       const pb = config.pb || 185
       const posicao_horizontal = config.posicao_horizontal || 0
       const posicao_vertical = config.posicao_vertical || 0
-      const yPendulo = pb + 15 + posicao_vertical
+      // Aproximar pêndulos da base reduzindo offset inferior
+      const yPendulo = pb + 5 + posicao_vertical
 
       // 🎯 X: Distribuir dentro da área útil do fundo (não na largura total do SVG)
       let xCabo
@@ -985,13 +990,15 @@ export default {
 .svg-content-container {
   width: 100%;
   height: auto;
-  max-height: 550px;
+  /* Aumentar levemente o limite para melhorar a visualização (+200px) */
+  max-height: 1000px;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  padding: 20px 10px;
+  /* Reduzir padding do container para minimizar área vazia inferior */
+  padding: 10px 8px;
 }
 
 
@@ -1010,7 +1017,8 @@ export default {
   background-color: transparent !important;
   width: 100%;
   height: auto;
-  max-height: 500px;
+  /* Ajuste coerente com os valores computados (+200px desktop) */
+  max-height: 950px;
   display: block;
   object-fit: contain;
 }

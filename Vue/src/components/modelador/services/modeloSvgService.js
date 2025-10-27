@@ -1,4 +1,4 @@
-﻿// src/servicos/modeloSvgService.js
+// src/servicos/modeloSvgService.js
 import client from "@/api.js";
 
 // ===== Helpers =====
@@ -574,6 +574,44 @@ const excluirModelo = async (id) => {
   }
 };
 
+// Novo: salvar ou atualizar por nm_modelo + tp_svg + vista_svg
+const salvarOuAtualizarPorNmModeloEVista = async (dadosModelo) => {
+  try {
+    const nm = (dadosModelo?.nm_modelo || '').trim();
+    const tp = dadosModelo?.tp_svg;
+    const vista = dadosModelo?.vista_svg;
+    if (!nm || !tp || !vista) {
+      return { status: 400, success: false, message: 'nm_modelo, tp_svg e vista_svg são obrigatórios' };
+    }
+
+    // Buscar registros existentes por tipo e vista
+    const consulta = await buscarModelosFiltrados(tp, vista);
+    const lista = Array.isArray(consulta.data) ? consulta.data : [];
+    const existente = lista.find(m => (m.nm_modelo || '').trim() === nm);
+
+    // Normalizar dado_svg para string
+    const payload = {
+      nm_modelo: nm,
+      tp_svg: tp,
+      vista_svg: vista,
+      ds_modelo: dadosModelo.ds_modelo || `Modelo atualizado em ${new Date().toLocaleDateString('pt-BR')}`,
+      dado_svg: typeof dadosModelo.dado_svg === 'string' ? dadosModelo.dado_svg : JSON.stringify(dadosModelo.dado_svg || {}),
+      imagem: dadosModelo.imagem || null
+    };
+
+    if (existente && (existente.id_svg || existente.id)) {
+      const id = existente.id_svg || existente.id;
+      return await atualizarModelo(id, payload);
+    }
+
+    // Se não existe, criar novo
+    return await salvarModelo(payload);
+  } catch (error) {
+    const { status, mensagem, payload } = extrairMensagemErro(error);
+    return { status, success: false, message: mensagem, error: payload || mensagem };
+  }
+};
+
 export const modeloSvgService = {
   salvarModelo,
   buscarModelos,
@@ -581,4 +619,5 @@ export const modeloSvgService = {
   buscarModeloPorId,
   atualizarModelo,
   excluirModelo,
+  salvarOuAtualizarPorNmModeloEVista,
 };

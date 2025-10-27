@@ -13,8 +13,8 @@
     <div
       ref="cardSilo"
       @mousedown="iniciarArrastoCardSilo"
-      style="position: absolute; top: 120px; right: 10px; z-index: 1000; background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); min-width: 250px; font-family: Arial, sans-serif; cursor: move;">
-      <h3 style="margin: 0 0 10px 0; color: #2E86AB; font-size: 16px; border-bottom: 2px solid #2E86AB; padding-bottom: 5px; cursor: move;">
+      style="position: absolute; top: 120px; right: 10px; z-index: 1000; background: rgba(255,255,255,0.6); backdrop-filter: blur(6px) saturate(1.2); border: 1px solid rgba(255,255,255,0.35); padding: 14px 16px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); min-width: 260px; font-family: Inter, Arial, sans-serif; cursor: move;">
+      <h3 style="margin: 0 0 10px 0; color: #3B82F6; font-size: 16px; border-bottom: 1px solid #3B82F6; padding-bottom: 6px; cursor: move;">
         📊 Informações do Silo
       </h3>
 
@@ -55,23 +55,23 @@
     <div v-if="mostrarCardCabo && caboSelecionado" 
          ref="cardCabo"
          @mousedown="iniciarArrastoCard"
-         style="position: absolute; top: 80px; right: 20px; z-index: 2000; background: rgba(255,255,255,0.98); padding: 20px; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-width: 400px; font-family: Arial, sans-serif; cursor: move;">
+         style="position: absolute; top: 80px; right: 20px; z-index: 2000; background: rgba(255,255,255,0.65); backdrop-filter: blur(8px) saturate(1.2); border: 1px solid rgba(255,255,255,0.35); padding: 18px 20px; border-radius: 12px; box-shadow: 0 12px 28px rgba(0,0,0,0.14); max-width: 420px; font-family: Inter, Arial, sans-serif; cursor: move;">
 
       <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 15px; cursor: move;">
-        <h4 style="margin: 0; color: #2E86AB; font-size: 18px;">
+        <h4 style="margin: 0; color: #3B82F6; font-size: 18px;">
           📊 {{ caboSelecionado.nome }}
         </h4>
         <button @click="fecharCardCabo" 
                 @mousedown.stop
-                style="background: #ff4444; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; font-size: 14px; margin-left: auto;">
+                style="background: rgba(239,68,68,0.9); color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; font-size: 14px; margin-left: auto; box-shadow: 0 2px 8px rgba(239,68,68,0.25);">
           ×
         </button>
       </div>
 
       <div style="max-height: 300px; overflow-y: auto;">
         <div v-for="(sensor, index) in caboSelecionado.sensores" :key="index"
-             style="display: flex; justify-content: space-between; align-items: center; padding: 8px; margin-bottom: 8px; border-radius: 6px; border-left: 4px solid;"
-             :style="`border-left-color: ${getCorSensorComNivel(sensor.temperatura, sensor.ativo, sensor.falha, sensor.temGrao)}; background: rgba(0,0,0,0.05);`">
+             style="display: flex; justify-content: space-between; align-items: center; padding: 10px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid;"
+             :style="`border-left-color: ${getCorSensorComNivel(sensor.temperatura, sensor.ativo, sensor.falha, sensor.temGrao)}; background: rgba(0,0,0,0.03);`">
 
           <div>
             <strong style="color: #333;">Sensor {{ sensor.numero }}:</strong>
@@ -102,7 +102,7 @@
     </div>
 
     <!-- Canvas 3D -->
-    <div ref="canvasContainer" style="height: 100%; background: linear-gradient(to bottom, #87CEEB, #E0F6FF);"></div>
+    <div ref="canvasContainer" style="height: 100%; background: linear-gradient(180deg, #bfe3ff 0%, #eaf4ff 100%);"></div>
   </div>
 </template>
 
@@ -250,6 +250,8 @@ export default {
 
       // Scene
       this.scene = new THREE.Scene();
+      // Suave profundidade de campo
+      this.scene.fog = new THREE.Fog(0xbfe3ff, raioSilo * 3, raioSilo * 8);
 
       // Camera
       this.camera = new THREE.PerspectiveCamera(
@@ -261,11 +263,16 @@ export default {
       this.updateCameraPosition(alturaSilo);
 
       // Renderer
-      this.renderer = new THREE.WebGLRenderer({ antialias: true });
+      this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      this.renderer.setPixelRatio(window.devicePixelRatio);
       this.renderer.setSize(container.clientWidth, container.clientHeight);
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      this.renderer.setClearColor(0x87CEEB);
+      this.renderer.outputEncoding = THREE.sRGBEncoding;
+      this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      this.renderer.toneMappingExposure = 1.05;
+      this.renderer.setClearColor(0x87CEEB, 1);
+      this.renderer.physicallyCorrectLights = true;
       container.appendChild(this.renderer.domElement);
 
       // Raycaster para detecção de cliques
@@ -406,20 +413,25 @@ export default {
     },
 
     setupLighting(raioSilo, alturaSilo) {
-      // Ambient light
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+      // Luz ambiente suave
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
       this.scene.add(ambientLight);
 
-      // Directional light
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+      // Hemisférica para céu/chão mais natural
+      const hemiLight = new THREE.HemisphereLight(0xeaf4ff, 0xb5b5b5, 0.6);
+      hemiLight.position.set(0, alturaSilo, 0);
+      this.scene.add(hemiLight);
+
+      // Direcional suave
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
       directionalLight.position.set(raioSilo * 4, alturaSilo * 2, raioSilo * 2);
       directionalLight.castShadow = true;
       directionalLight.shadow.mapSize.width = 2048;
       directionalLight.shadow.mapSize.height = 2048;
       this.scene.add(directionalLight);
 
-      // Point light
-      const pointLight = new THREE.PointLight(0xffffff, 0.6);
+      // Ponto leve
+      const pointLight = new THREE.PointLight(0xffffff, 0.3);
       pointLight.position.set(0, alturaSilo, 0);
       this.scene.add(pointLight);
     },
@@ -430,12 +442,12 @@ export default {
       // Corpo principal do silo - cilindro com aparência mais realista
       const cylinderGeometry = new THREE.CylinderGeometry(raioSilo, raioSilo, alturaSilo, 48, 1, true);
       const cylinderMaterial = new THREE.MeshStandardMaterial({
-        color: 0xE0E0E0, // Cinza claro metálico
+        color: 0xF2F4F7,
         transparent: true,
-        opacity: 0.4, // Menos transparente
+        opacity: 0.25,
         side: THREE.DoubleSide,
-        metalness: 0.7, // Mais metálico
-        roughness: 0.3  // Menos rugoso
+        metalness: 0.2,
+        roughness: 0.8
       });
       const cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
       cylinder.position.y = alturaSilo / 2;
@@ -444,17 +456,17 @@ export default {
       this.scene.add(cylinder);
 
       // === ANÉIS HORIZONTAIS METÁLICOS (apenas alguns, mais simples) ===
-      const numAneis = Math.min(4, Math.floor(alturaSilo / 2)); // Máximo 4 anéis, mais espaçados
+      const numAneis = Math.min(3, Math.floor(alturaSilo / 2)); // Máximo 3 anéis, mais espaçados
       
       for (let i = 1; i <= numAneis; i++) {
         const alturaAnel = (i * alturaSilo) / (numAneis + 1);
         
         // Anel principal simples
-        const anelGeometry = new THREE.TorusGeometry(raioSilo * 1.01, 0.04, 6, 24);
+        const anelGeometry = new THREE.TorusGeometry(raioSilo * 1.01, 0.03, 8, 32);
         const anelMaterial = new THREE.MeshStandardMaterial({
-          color: 0x999999, // Cinza metálico
-          metalness: 0.8,
-          roughness: 0.2
+          color: 0xbdbdbd,
+          metalness: 0.6,
+          roughness: 0.35
         });
         const anel = new THREE.Mesh(anelGeometry, anelMaterial);
         anel.position.y = alturaAnel;
@@ -478,9 +490,9 @@ export default {
       // === TETO CÔNICO MELHORADO (mais simples e realista) ===
       const coneGeometry = new THREE.ConeGeometry(raioSilo * 1.05, alturaTopo, 32);
       const coneMaterial = new THREE.MeshStandardMaterial({
-        color: 0xB0B0B0, // Cor mais clara e natural
-        metalness: 0.7,   // Bem metálico
-        roughness: 0.2    // Bem liso
+        color: 0xd7d9dc,
+        metalness: 0.3,
+        roughness: 0.7
       });
       const cone = new THREE.Mesh(coneGeometry, coneMaterial);
       cone.position.y = alturaSilo + alturaTopo / 2;
@@ -491,8 +503,8 @@ export default {
       const capGeometry = new THREE.ConeGeometry(raioSilo * 0.15, 0.12, 16);
       const capMaterial = new THREE.MeshStandardMaterial({
         color: 0x2a2a2a,
-        metalness: 0.8,
-        roughness: 0.1
+        metalness: 0.6,
+        roughness: 0.35
       });
       const cap = new THREE.Mesh(capGeometry, capMaterial);
       cap.position.y = alturaSilo + alturaTopo + 0.06; // Mais acima para ficar bem no topo
@@ -948,7 +960,7 @@ export default {
       const edgeMaterial = new THREE.LineBasicMaterial({
         color: 0xB8A06B,
         transparent: true,
-        opacity: 0.25
+        opacity: 0.12
       });
       const edgeLines = new THREE.LineSegments(edges, edgeMaterial);
       edgeLines.renderOrder = -2; // Atrás dos cabos
@@ -1067,14 +1079,14 @@ export default {
     },
 
     createCable(position, alturaSilo, penduloNome, sensores) {
-      // Pêndulo mais fino como solicitado
-      const cableGeometry = new THREE.CylinderGeometry(0.04, 0.04, alturaSilo - 0.3, 12);
+      // Pêndulo mais fino e mais clean
+      const cableGeometry = new THREE.CylinderGeometry(0.02, 0.02, alturaSilo - 0.3, 16);
       const cableMaterial = new THREE.MeshStandardMaterial({
-        color: 0x1a1a1a,
-        metalness: 0.8,
-        roughness: 0.2,
-        emissive: 0x333333,
-        emissiveIntensity: 0.2
+        color: 0x2a2a2a,
+        metalness: 0.4,
+        roughness: 0.75,
+        emissive: 0x000000,
+        emissiveIntensity: 0
       });
       const cable = new THREE.Mesh(cableGeometry, cableMaterial);
       cable.position.set(position[0], (alturaSilo + 0.3) / 2, position[2]);
@@ -1111,22 +1123,41 @@ export default {
     createPendulumLabel(position, pendulo) {
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
-      canvas.width = 128;
-      canvas.height = 64;
+      canvas.width = 160;
+      canvas.height = 56;
 
-      context.fillStyle = '#2E86AB';
-      context.fillRect(0, 0, canvas.width, canvas.height);
+      // Função helper para retângulo arredondado
+      const roundedRect = (ctx, x, y, w, h, r) => {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+      };
 
-      context.fillStyle = 'white';
-      context.font = '24px Arial';
+      // Fundo pill translúcido
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = 'rgba(59,130,246,0.15)';
+      context.strokeStyle = 'rgba(59,130,246,0.35)';
+      context.lineWidth = 2;
+      roundedRect(context, 6, 6, canvas.width - 12, canvas.height - 12, 14);
+      context.fill();
+      context.stroke();
+
+      // Texto
+      context.fillStyle = '#1f2937';
+      context.font = 'bold 22px Arial';
       context.textAlign = 'center';
-      context.fillText(pendulo, canvas.width / 2, canvas.height / 2 + 8);
+      context.textBaseline = 'middle';
+      context.fillText(pendulo, canvas.width / 2, canvas.height / 2);
 
       const texture = new THREE.CanvasTexture(canvas);
       const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
       const sprite = new THREE.Sprite(spriteMaterial);
-      sprite.position.set(position[0], -0.5, position[2]);
-      sprite.scale.set(0.6, 0.3, 1);
+      sprite.position.set(position[0], 0.2, position[2]);
+      sprite.scale.set(0.5, 0.22, 1);
       this.scene.add(sprite);
       this.textSprites.push(sprite);
     },
@@ -1170,13 +1201,13 @@ export default {
       const cor = ativo ? (temGrao ? this.corFaixaExata(temp) : 0xcccccc) : 0xcccccc;
 
       // Sensor redondo como solicitado
-      const sensorGeometry = new THREE.SphereGeometry(0.15, 16, 12);
+      const sensorGeometry = new THREE.SphereGeometry(0.12, 20, 16);
       const sensorMaterial = new THREE.MeshStandardMaterial({
         color: cor,
-        emissive: alarme ? 0xff0000 : (temGrao ? cor : 0x444444),
-        emissiveIntensity: alarme ? 0.4 : (temGrao ? 0.15 : 0.1),
-        metalness: 0.4,
-        roughness: 0.6
+        emissive: alarme ? 0xff0000 : (temGrao ? cor : 0x000000),
+        emissiveIntensity: alarme ? 0.3 : (temGrao ? 0.12 : 0.06),
+        metalness: 0.25,
+        roughness: 0.65
       });
       const sensor = new THREE.Mesh(sensorGeometry, sensorMaterial);
       sensor.position.set(position[0], yPos, position[2]);
@@ -1205,8 +1236,8 @@ export default {
     },
 
     createSensorAntenna(position, yPos) {
-      const antennaGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.08, 8);
-      const antennaMaterial = new THREE.MeshStandardMaterial({ color: 0x666666 });
+      const antennaGeometry = new THREE.CylinderGeometry(0.008, 0.008, 0.06, 12);
+      const antennaMaterial = new THREE.MeshStandardMaterial({ color: 0x8c8c8c });
       const antenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
       antenna.position.set(position[0], yPos + 0.08, position[2]);
       this.scene.add(antenna);
@@ -1215,11 +1246,11 @@ export default {
     
 
     createWeight(position) {
-      const weightGeometry = new THREE.CylinderGeometry(0.08, 0.06, 0.2, 16);
+      const weightGeometry = new THREE.CylinderGeometry(0.08, 0.06, 0.16, 16);
       const weightMaterial = new THREE.MeshStandardMaterial({
-        color: 0x444444,
-        metalness: 0.8,
-        roughness: 0.3
+        color: 0x555555,
+        metalness: 0.6,
+        roughness: 0.5
       });
       const weight = new THREE.Mesh(weightGeometry, weightMaterial);
       weight.position.set(position[0], 0.3 + 0.1, position[2]);
@@ -1544,27 +1575,63 @@ export default {
     },
 
     buildGroundGrid(raioSilo) {
-      const gridSize = raioSilo * 12;
-      const divisions = 20;
-      const step = gridSize / divisions;
+      // Chão com grama procedural para visual mais natural
+      const size = raioSilo * 12;
+      const grassTexture = this.createGrassTexture();
+      grassTexture.wrapS = THREE.RepeatWrapping;
+      grassTexture.wrapT = THREE.RepeatWrapping;
+      grassTexture.repeat.set(32, 32);
 
-      // Linhas horizontais
-      for (let i = 0; i <= divisions; i++) {
-        const geometry = new THREE.BoxGeometry(gridSize, 0.02, 0.02);
-        const material = new THREE.MeshStandardMaterial({ color: 0x666666 });
-        const line = new THREE.Mesh(geometry, material);
-        line.position.set(0, -0.5, (i - divisions / 2) * step);
-        this.scene.add(line);
+      const planeGeo = new THREE.PlaneGeometry(size, size);
+      const planeMat = new THREE.MeshStandardMaterial({
+        map: grassTexture,
+        roughness: 1,
+        metalness: 0
+      });
+      const grass = new THREE.Mesh(planeGeo, planeMat);
+      grass.rotation.x = -Math.PI / 2;
+      grass.position.y = -0.5;
+      grass.receiveShadow = true;
+      this.scene.add(grass);
+    },
+
+    createGrassTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+
+      // Base verde
+      ctx.fillStyle = '#7dbf4f';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Ruído sutil para textura de grama
+      for (let i = 0; i < 8000; i++) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        const r = Math.random() * 1.6 + 0.2;
+        const g = Math.floor(135 + Math.random() * 60);
+        ctx.fillStyle = `rgb(${g - 70}, ${g}, ${g - 90})`;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
       }
 
-      // Linhas verticais
-      for (let i = 0; i <= divisions; i++) {
-        const geometry = new THREE.BoxGeometry(0.02, 0.02, gridSize);
-        const material = new THREE.MeshStandardMaterial({ color: 0x666666 });
-        const line = new THREE.Mesh(geometry, material);
-        line.position.set((i - divisions / 2) * step, -0.5, 0);
-        this.scene.add(line);
+      // Tracinhos discretos para quebrar uniformidade
+      ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 50; i++) {
+        ctx.beginPath();
+        ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+        ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+        ctx.stroke();
       }
+
+      const texture = new THREE.CanvasTexture(canvas);
+      if (this.renderer && this.renderer.capabilities && typeof this.renderer.capabilities.getMaxAnisotropy === 'function') {
+        texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+      }
+      return texture;
     },
 
     setupAutoZoom(alturaSilo, raioSilo) {

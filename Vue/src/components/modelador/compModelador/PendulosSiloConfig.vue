@@ -35,17 +35,26 @@
         <label class="form-label small fw-bold mb-2">Configuração dos Pêndulos:</label>
         <div class="row g-2">
           <div 
-            v-for="numeroPendulo in configSilo.quantidadePendulos" 
-            :key="numeroPendulo"
+            v-for="(numeroPendulo, idx) in ordemRenderizada" 
+            :key="`pend-${numeroPendulo}`"
             class="col-12"
+            :class="{ dragging: dragIndex === idx }"
+            draggable="true"
+            @dragstart="iniciarDrag(idx)"
+            @dragover.prevent
+            @drop="finalizarDrop(idx)"
+            @dragend="cancelarDrag"
           >
-            <div class="p-2 border rounded" style="background-color: #f8f9fa;">
+            <div class="p-2 border rounded" :style="estiloCardPendulo(numeroPendulo)">
               <div class="d-flex align-items-center justify-content-between mb-2">
                 <div class="flex-grow-1">
                   <strong class="small">Pêndulo {{ numeroPendulo }}</strong>
                   <div class="text-muted" style="font-size: 0.75rem;">
                     {{ configSilo.sensoresPorPendulo[numeroPendulo] || 5 }} sensor{{ (configSilo.sensoresPorPendulo[numeroPendulo] || 5) > 1 ? 'es' : '' }}
                   </div>
+                </div>
+                <div class="text-muted small me-2" title="Arraste para reordenar" style="cursor: grab; user-select: none;">
+                  ⇅
                 </div>
                 
                 <div class="input-group input-group-sm" style="max-width: 120px;">
@@ -167,7 +176,21 @@ export default {
       default: false
     }
   },
+  emits: ['toggle-acordeon', 'reset-field', 'quantidade-pendulos-change', 'alterar-sensores', 'set-sensores-pendulo', 'tipo-posicao-change', 'tipo-cabo-change', 'aplicar-sensores-uniformes', 'resetar-sensores-padrao', 'reordenar-pendulos'],
+  data() {
+    return {
+      dragIndex: null
+    }
+  },
   computed: {
+    ordemRenderizada() {
+      const q = this.configSilo.quantidadePendulos || 0
+      const base = Array.from({ length: q }, (_, i) => i + 1)
+      const ordem = Array.isArray(this.configSilo.ordemPendulos) && this.configSilo.ordemPendulos.length === q
+        ? this.configSilo.ordemPendulos
+        : base
+      return ordem
+    },
     totalSensores() {
       let total = 0
       for (let i = 1; i <= (this.configSilo.quantidadePendulos || 5); i++) {
@@ -181,6 +204,31 @@ export default {
     }
   },
   methods: {
+    estiloCardPendulo(num) {
+      const tipo = (this.configSilo.tipoPosicaoPendulo && this.configSilo.tipoPosicaoPendulo[num]) || 'central'
+      const cores = {
+        lateral: 'rgba(13,110,253,0.08)',       // azul claro
+        central: 'rgba(25,135,84,0.10)',        // verde claro
+        intermediario: 'rgba(255,193,7,0.12)'   // amarelo claro
+      }
+      return { backgroundColor: cores[tipo] || '#f8f9fa' }
+    },
+    iniciarDrag(index) {
+      this.dragIndex = index
+      try { document.body.style.cursor = 'grabbing' } catch(_) {}
+    },
+    finalizarDrop(destIndex) {
+      try {
+        if (this.dragIndex == null || destIndex == null) return
+        const arr = this.ordemRenderizada.slice()
+        const [moved] = arr.splice(this.dragIndex, 1)
+        arr.splice(destIndex, 0, moved)
+        this.dragIndex = null
+        try { document.body.style.cursor = '' } catch(_) {}
+        this.$emit('reordenar-pendulos', arr)
+      } catch (_) { this.dragIndex = null; try { document.body.style.cursor = '' } catch(_) {} }
+    },
+    cancelarDrag() { this.dragIndex = null; try { document.body.style.cursor = '' } catch(_) {} },
     onQuantidadePendulosChange(event) {
       const valor = parseInt(event.target.value)
       // Atualiza imediatamente o campo no pai para refletir no preview
@@ -222,3 +270,9 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.dragging, .dragging * {
+  cursor: grabbing !important;
+}
+</style>

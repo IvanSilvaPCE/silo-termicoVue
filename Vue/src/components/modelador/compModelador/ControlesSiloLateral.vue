@@ -107,6 +107,26 @@
       </div>
     </div>
 
+    <div class="mb-3">
+      <label class="form-label small fw-bold">
+        <i class="fa fa-shapes me-1"></i>Formato do nível inferior:
+      </label>
+      <div class="d-flex align-items-center gap-2">
+        <select 
+          class="form-select form-select-sm"
+          v-model="configSilo.formato_nivel_inferior"
+          @change="$emit('silo-change')"
+          style="min-width: 160px;"
+        >
+          <option value="reto">Reto</option>
+          <option value="v">Formato em V (espelhado)</option>
+        </select>
+      </div>
+      <small class="text-muted d-block mt-1">
+        Escolha "V" para espelhar a tampa superior na base.
+      </small>
+    </div>
+
     <!-- Seção: Sensores da Lateral -->
     <h6 class="mb-3" style="color: #06335E;"><i class="fa fa-wifi me-1"></i> Sensores da Lateral</h6>
 
