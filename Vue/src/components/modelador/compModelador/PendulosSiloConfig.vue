@@ -206,12 +206,26 @@ export default {
   methods: {
     estiloCardPendulo(num) {
       const tipo = (this.configSilo.tipoPosicaoPendulo && this.configSilo.tipoPosicaoPendulo[num]) || 'central'
-      const cores = {
-        lateral: 'rgba(13,110,253,0.08)',       // azul claro
-        central: 'rgba(25,135,84,0.10)',        // verde claro
-        intermediario: 'rgba(255,193,7,0.12)'   // amarelo claro
-      }
-      return { backgroundColor: cores[tipo] || '#f8f9fa' }
+      // Paleta igual ao ícone do pêndulo (SiloLateralSvg.getCorPendulo), porém clareada
+      const baseHex = {
+        lateral: '#FF6B35',       // mesmo do ícone do pêndulo (laranja)
+        central: '#3A78FD',       // azul
+        intermediario: '#4ECDC4'  // ciano/verde água
+      }[tipo]
+
+      const rgba = this.hexParaRgba(baseHex || '#f8f9fa', 0.12) // fundo mais claro/pro branco
+      return { backgroundColor: rgba }
+    },
+
+    hexParaRgba(hex, alpha = 0.12) {
+      if (!hex) return `rgba(248,249,250,${alpha})`
+      const h = hex.replace('#', '')
+      const bigint = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16)
+      const r = (bigint >> 16) & 255
+      const g = (bigint >> 8) & 255
+      const b = bigint & 255
+      const a = Math.max(0, Math.min(1, alpha))
+      return `rgba(${r}, ${g}, ${b}, ${a})`
     },
     iniciarDrag(index) {
       this.dragIndex = index

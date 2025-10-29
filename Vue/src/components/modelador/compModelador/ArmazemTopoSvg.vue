@@ -158,7 +158,7 @@
           :y="pendulo.y + 1"  
           class="pendulo-text" 
           text-anchor="middle" 
-          dominant-baseline="central"
+          dominant-baseline="middle"
           :fill="pendulo.arcoNumero === arcoSelecionado ? '#000000' : '#555555'"
           font-size="8"
           font-weight="bold"
@@ -283,14 +283,14 @@ export default {
       const topo = this.config?.topo || {}
       const p = topo.cores || {}
       return {
-        celulaFill: p.celulaFill || '#B3B3B3',
-        celulaStroke: p.celulaStroke || '#B3B3B3',
-        celulaSelFill: p.celulaSelFill || '#E6E6E6',
+        celulaFill: p.celulaFill || 'none',
+        celulaStroke: p.celulaStroke || '#DDDDDD',
+        celulaSelFill: p.celulaSelFill || 'none',
         celulaSelStroke: p.celulaSelStroke || '#438AF6',
-        trilhoSel: p.trilhoSel || '#999999',
-        trilho: p.trilho || '#999999',
+        trilhoSel: p.trilhoSel || '#AAAAAA',
+        trilho: p.trilho || '#BBBBBB',
         botaoSel: p.botaoSel || '#33CC33',
-        botao: p.botao || '#999999',
+        botao: p.botao || '#BBBBBB',
         botaoText: p.botaoText || '#000000',
         penduloSelFill: p.penduloSelFill || '#5CB85C',
         penduloFill: p.penduloFill || '#FFFFFF',
@@ -376,6 +376,18 @@ export default {
         for (let i = 0; i < qtd; i++) padrao.push(base[i % base.length])
         return padrao
       }
+
+      // Converte xRel (0..1) da visão lateral em Y no topo
+      const yFromRel = (xRel) => {
+        const rel = Math.max(0, Math.min(1, Number.isFinite(xRel) ? xRel : 0.5))
+        return this.margemY + paddingY + (alturaUtil * rel)
+      }
+
+      // Centro X do arco (mantemos os círculos no trilho)
+      const centerX = (arcoIndex) => {
+        const larguraArcoLocal = this.larguraArmazem / this.quantidadeArcos
+        return this.margemX + (larguraArcoLocal * arcoIndex) + (larguraArcoLocal / 2)
+      }
       
       if (this.modeloAtual) {
         // Modo de edição de modelo específico - mostrar só os pêndulos deste arco
@@ -394,8 +406,8 @@ export default {
           if (this.lateralPadraoArcos?.[arcoNum]?.[penduloId] != null) {
             xRel = this.lateralPadraoArcos[arcoNum][penduloId]
           }
-          const xPos = xInicioArco + margemInterna + larguraUtil * xRel
-          const yPos = this.margemY + paddingY + (alturaUtil * xRel)
+          const xPos = centerX(arcoIndex)
+          const yPos = yFromRel(xRel)
           
           if (this.posicoesManualPendulos[penduloId]) {
             pendulos.push({
@@ -439,8 +451,8 @@ export default {
               if (this.lateralPadraoArcos?.[arcoNum]?.[penduloId] != null) {
                 xRel = this.lateralPadraoArcos[arcoNum][penduloId]
               }
-              const xPos = xInicioArco + margemInterna + larguraUtil * xRel
-              const yPos = this.margemY + paddingY + (alturaUtil * xRel)
+              const xPos = centerX(arcoIndex)
+              const yPos = yFromRel(xRel)
               if (this.posicoesManualPendulos[penduloId]) {
                 pendulos.push({
                   label: `${arcoNum}.${i}`,
@@ -482,8 +494,8 @@ export default {
               if (this.lateralPadraoArcos?.[arcoNum]?.[penduloId] != null) {
                 xRel = this.lateralPadraoArcos[arcoNum][penduloId]
               }
-              const xPos = xInicioArco + margemInterna + larguraUtil * xRel
-              const yPos = this.margemY + paddingY + (alturaUtil * xRel)
+              const xPos = centerX(arcoIndex)
+              const yPos = yFromRel(xRel)
               if (this.posicoesManualPendulos[penduloId]) {
                 pendulos.push({
                   label: `${arcoNum}.${i}`,
@@ -528,7 +540,22 @@ export default {
       const celSel = this.celulaSelecionadaIndex
       const celArco = this.celulaDoArco(i)
       if (celSel != null && celArco === celSel) return '#E6E6E6'
-      return '#B3B3B3'
+      return '#E6E6E6'
+    },
+    // Opacidade de preenchimento para reduzir poluição visual
+    opacidadeRecArco(i) {
+      const arcoSel = Number(this.arcoSelecionado)
+      if (arcoSel === i) return 0.2
+      const celSel = this.celulaSelecionadaIndex
+      const celArco = this.celulaDoArco(i)
+      if (celSel != null && celArco === celSel) return 0.12
+      return 0.08
+    },
+    // Stroke para contorno de arco
+    corRecArcoStroke(i) {
+      const arcoSel = Number(this.arcoSelecionado)
+      if (arcoSel === i) return '#438AF6'
+      return '#DDDDDD'
     },
 
     // Índice da célula a que um arco pertence
@@ -600,13 +627,18 @@ export default {
       const newX = svgP.x - this.dragOffset.x
       const newY = svgP.y - this.dragOffset.y
       
+      // Centro do arco correspondente (travar X no trilho)
+      const arcoNumDrag = this.dragElement.arcoNumero
+      const larguraArco = this.larguraArmazem / Math.max(this.quantidadeArcos, 1)
+      const xCentro = this.margemX + (larguraArco * (arcoNumDrag - 1)) + (larguraArco / 2)
+      
       // Limitar movimento dentro do armazém
       const finalX = Math.max(this.margemX + 10, Math.min(newX, this.margemX + this.larguraArmazem - 10))
       const finalY = Math.max(this.margemY + 10, Math.min(newY, this.margemY + this.alturaArmazem - 10))
       
       // Atualizar posição
       this.$set(this.posicoesManualPendulos, this.dragElement.id, {
-        x: finalX,
+        x: xCentro,
         y: finalY
       })
       
@@ -618,16 +650,16 @@ export default {
       
       // Emitir padrão lateral atualizado (comunicação paralela)
       const arcoNum = this.dragElement.arcoNumero
-      const larguraArco = this.larguraArmazem / Math.max(this.quantidadeArcos, 1)
-      const xInicioArco = this.margemX + larguraArco * (arcoNum - 1)
-      const margemInterna = 8
-      const larguraUtil = Math.max(larguraArco - margemInterna * 2, 0)
-      let xRel = (finalX - (xInicioArco + margemInterna)) / (larguraUtil || 1)
-      xRel = Math.max(0, Math.min(1, xRel))
+      
+      // Ajuste de espelhamento: usa Y do topo para atualizar X_rel da lateral
+      const paddingY2 = 24
+      const alturaUtil2 = this.alturaArmazem - (paddingY2 * 2)
+      let xRelFromY = (finalY - (this.margemY + paddingY2)) / (alturaUtil2 || 1)
+      xRelFromY = Math.max(0, Math.min(1, xRelFromY))
       this.$emit('padrao-lateral-atualizado', {
         arcoNumero: arcoNum,
         penduloId: this.dragElement.id,
-        xRel
+        xRel: xRelFromY
       })
     },
     
@@ -649,15 +681,26 @@ export default {
       if (!qtdPendulos) return
 
       for (let i = 1; i <= qtdPendulos; i++) {
-        const xRel = valoresXRel[i - 1] != null ? valoresXRel[i - 1] : 0.5
-        const xPos = xInicioArco + margemInterna + larguraUtil * xRel
-        const yPos = this.margemY + paddingY + alturaUtil * xRel
+        // Alinhar no centro do arco com espaçamento vertical uniforme
+        const pos = this.calcularPosicaoVerticalArco(i, qtdPendulos, arcoNumero - 1)
+        const xPos = pos.x
+        const yPos = pos.y
         const idGeral = `A${arcoNumero}_${i}`
         const idModelo = `${arcoNumero}_${i}`
         // Atualiza ambos identificadores se existirem
         if (this.posicoesManualPendulos[idGeral] || !this.posicoesManualPendulos[idModelo]) {
           this.$set(this.posicoesManualPendulos, idGeral, { x: xPos, y: yPos })
         }
+        this.$set(this.posicoesManualPendulos, idModelo, { x: xPos, y: yPos })
+      }
+      // Ajuste final: posiciona usando valoresXRel (lateral -> topo)
+      for (let i = 1; i <= qtdPendulos; i++) {
+        const xRel = Number.isFinite(valoresXRel[i - 1]) ? valoresXRel[i - 1] : 0.5
+        const xPos = this.margemX + (larguraArco * (arcoNumero - 1)) + (larguraArco / 2)
+        const yPos = this.margemY + paddingY + (alturaUtil * Math.max(0, Math.min(1, xRel)))
+        const idGeral = `A${arcoNumero}_${i}`
+        const idModelo = `${arcoNumero}_${i}`
+        this.$set(this.posicoesManualPendulos, idGeral, { x: xPos, y: yPos })
         this.$set(this.posicoesManualPendulos, idModelo, { x: xPos, y: yPos })
       }
       this.$emit('posicoes-atualizadas', { tipo: 'topo', pendulos: { ...this.posicoesManualPendulos } })

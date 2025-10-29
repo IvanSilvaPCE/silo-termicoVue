@@ -364,12 +364,10 @@ export default {
       if (this.quantidadePendulos === 1) {
         return lb / 2
       } else {
-        // Espaçamento centralizado (deixa uma borda simétrica nas laterais)
-        const espacamento = larguraUtil / (this.quantidadePendulos + 1)
-        // posição visual baseada no índice dentro da ordem renderizada
+        const espacamento = larguraUtil / (this.quantidadePendulos - 1)
+        // posição visual é baseada no índice dentro da ordem renderizada
         const idx = Math.max(0, this.ordemRenderizada.indexOf(numeroPendulo))
-        // Usar (idx + 1) para evitar colar nas bordas; fica alinhado ao "trilho" cinza
-        return margemLateral + ((idx + 1) * espacamento)
+        return margemLateral + (idx * espacamento)
       }
     },
     calcularPosicaoYSensor(numeroSensor, pendulo) {
