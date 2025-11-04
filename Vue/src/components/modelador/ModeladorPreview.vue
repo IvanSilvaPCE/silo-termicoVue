@@ -70,7 +70,7 @@
         <template v-else-if="tipoAtivo === 'armazem' && visaoAtiva === 'topo'">
           <ImagemFundoContainer :imagem-fundo-data="imagemFundoData" />
           <ArmazemTopoSvg 
-            :config="{ modelosArcos, topo: configTopoArmazem, lateral: lateralPadraoArcos }"
+            :config="armazemTopoConfig"
             :modelo-atual="modeloArcoAtual"
             :quantidade-modelos="quantidadeModelosArcos"
             :layout-topo="layoutTopoCarregado"
@@ -266,6 +266,94 @@ export default {
     },
     badgeText() {
       return this.getBadgeTextFn ? this.getBadgeTextFn() : 'TODOS'
+    },
+    // Adapter: objeto de configuração para ArmazemTopoSvg com mapeamento lateral/topo
+    armazemTopoConfig() {
+      const topo = this.configTopoArmazem || {}
+      const modelos = this.modelosArcos || {}
+      const totalArcos = Math.max(
+        parseInt(topo.totalArcos) || 0,
+        this.quantidadeModelosArcos || 0,
+        this.analiseArcos?.totalArcos || 0,
+        1
+      )
+
+      const determinarTipoArco = (arcoNum) => {
+        const q = this.quantidadeModelosArcos || 1
+        if (q === 1) return 'todos'
+        if (q === 2) return arcoNum % 2 === 0 ? 'par' : 'impar'
+        if (q === 3) {
+          if (arcoNum === 1 || arcoNum === totalArcos) return 'frente_fundo'
+          return arcoNum % 2 === 0 ? 'par' : 'impar'
+        }
+        if (q === 4) {
+          if (arcoNum === 1) return 'frente'
+          if (arcoNum === totalArcos) return 'fundo'
+          return arcoNum % 2 === 0 ? 'par' : 'impar'
+        }
+        return 'todos'
+      }
+
+      const encontrarModeloPorPosicao = (posicao) => {
+        const entry = Object.entries(modelos).find(([, m]) => m && m.posicao === posicao)
+        if (!entry) return null
+        const [indice, m] = entry
+        return { indice: parseInt(indice), modelo: m }
+      }
+
+      const coletarPadraoXRel = (arcoRef, quantidade) => {
+        const lateral = this.lateralPadraoArcos || {}
+        const padrao = []
+        for (let i = 1; i <= quantidade; i++) {
+          const idGeral = `A${arcoRef}_${i}`
+          const idModelo = `${arcoRef}_${i}`
+          const v = (lateral?.[arcoRef]?.[idGeral] ?? lateral?.[arcoRef]?.[idModelo])
+          padrao.push(Number.isFinite(v) ? v : 0.5)
+        }
+        return padrao
+      }
+
+      const mapaArcos = {}
+      for (let a = 1; a <= totalArcos; a++) {
+        mapaArcos[a] = determinarTipoArco(a)
+      }
+
+      const modelosLaterais = {}
+      const tipos = new Set(Object.values(mapaArcos))
+      tipos.forEach(tipo => {
+        let arcoRef = 1
+        if (tipo === 'fundo') arcoRef = totalArcos
+        else if (tipo === 'par') arcoRef = 2 <= totalArcos ? 2 : 1
+        else if (tipo === 'impar') arcoRef = 1
+        else if (tipo === 'frente_fundo') arcoRef = 1
+        else if (tipo === 'frente') arcoRef = 1
+        else if (tipo === 'todos') arcoRef = 1
+
+        const encontrado = encontrarModeloPorPosicao(tipo)
+        let quantidade = encontrado?.modelo?.quantidadePendulos
+        if (!quantidade && tipo === 'frente_fundo') {
+          const alt = encontrarModeloPorPosicao('frente') || encontrarModeloPorPosicao('fundo')
+          quantidade = alt?.modelo?.quantidadePendulos
+        }
+        if (!quantidade) {
+          const first = Object.values(modelos)[0]
+          quantidade = first?.quantidadePendulos || 3
+        }
+
+        modelosLaterais[tipo] = {
+          padraoXRel: coletarPadraoXRel(arcoRef, quantidade)
+        }
+      })
+
+      return {
+        modelosArcos: modelos,
+        topo,
+        lateral: {
+          modelos: modelosLaterais,
+          mapaArcos,
+          regraParImpar: true
+        }
+      }
     }
   },
   watch: {

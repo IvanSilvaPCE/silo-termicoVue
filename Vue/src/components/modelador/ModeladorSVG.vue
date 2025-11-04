@@ -310,12 +310,14 @@
                   <ModelosArcos :quantidade-modelos-arcos="quantidadeModelosArcos" :modelo-arco-atual="modeloArcoAtual"
                     :modelos-arcos="modelosArcos" :modelos-salvos="modelosSalvos" :modelo-nome="modeloNome"
                     :modelo-posicao="modeloPosicao" :cabo-selecionado-posicionamento="caboSelecionadoPosicionamento"
-                    :posicoes-cabos="posicoesCabos" @quantidade-modelos-change="onQuantidadeModelosChange"
+                    :posicoes-cabos="posicoesCabos" :total-arcos-topo="configTopoArmazem.totalArcos"
+                    @quantidade-modelos-change="onQuantidadeModelosChange"
                     @modelo-arco-change="onModeloArcoChange" @nome-modelo-change="onNomeModeloChange"
                     @posicao-arco-change="onPosicaoArcoChange" @alterar-quantidade-pendulos="alterarQuantidadePendulos"
                     @quantidade-pendulos-change="onQuantidadePendulosChange"
                     @update:cabo-selecionado-posicionamento="caboSelecionadoPosicionamento = $event"
                     @posicao-cabo-change="onPosicaoCaboChange" @resetar-posicoes-cabos="resetarPosicoesCabos"
+                    @total-arcos-change="onTotalArcosChange"
                     @salvar-modelo-atual="salvarModeloAtual" @modelo-dados-atualizados="onModeloDadosAtualizados" />
                 </div>
               </div>
@@ -1951,6 +1953,14 @@ export default {
         this.modeloArcoAtual = 1
         this.configArmazem = { ...this.modelosArcos[1].config }
       }
+
+      // 🔄 SINCRONIZAÇÃO: Atualizar totalArcos para respeitar mínimo de modelos
+      if (this.configTopoArmazem && this.configTopoArmazem.totalArcos < qtd) {
+        this.configTopoArmazem.totalArcos = qtd
+      }
+      
+      // Atualizar distribuição de arcos automaticamente
+      this.atualizarDistribuicaoArcos()
 
       this.salvarModelosAutomatico()
     },

@@ -133,6 +133,35 @@
       </div>
     </div>
 
+    <!-- Seção: Sistema de Espelhamento -->
+    <h6 class="mb-3" style="color: #06335E;"><i class="fa fa-clone me-1"></i> Sistema de Espelhamento</h6>
+
+    <div class="form-check mb-3">
+      <input 
+        class="form-check-input" 
+        type="checkbox" 
+        id="espelhamentoAtivo"
+        :checked="configArmazem.espelhamentoAtivo !== false"
+        @change="onEspelhamentoChange"
+      />
+      <label class="form-check-label small" for="espelhamentoAtivo">
+        <i class="fa fa-exchange me-1"></i> Ativar Espelhamento Automático
+      </label>
+      <small class="text-muted d-block mt-1">
+        Inverte automaticamente as posições dos pêndulos entre modelos par/ímpar
+      </small>
+    </div>
+
+    <div class="alert alert-info p-2 mb-3" style="font-size: 0.85rem;">
+      <strong><i class="fa fa-info-circle me-1"></i> Como funciona:</strong>
+      <ul class="mb-0 mt-1 small">
+        <li><strong>1 modelo:</strong> Todos iguais (sem espelhamento)</li>
+        <li><strong>2 modelos:</strong> Arcos pares são espelho dos ímpares</li>
+        <li><strong>3 modelos:</strong> Frente/fundo iguais, meio intercala par/ímpar espelhado</li>
+        <li><strong>4 modelos:</strong> Frente → intercala par/ímpar espelhado → Fundo</li>
+      </ul>
+    </div>
+
     <!-- Seção: Sensores da Lateral -->
     <h6 class="mb-3" style="color: #06335E;"><i class="fa fa-wifi me-1"></i> Sensores da Lateral</h6>
 
@@ -310,6 +339,10 @@ export default {
   methods: {
     resetField(field, defaultValue) {
       this.configArmazem[field] = defaultValue
+      this.$emit('armazem-change')
+    },
+    onEspelhamentoChange(event) {
+      this.configArmazem.espelhamentoAtivo = event.target.checked
       this.$emit('armazem-change')
     }
   }

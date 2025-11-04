@@ -218,6 +218,14 @@ export default {
     }
   },
   computed: {
+    // Alias compatível: muitos trechos usam quantidadeModelosArcos,
+    // mas o prop exposto é quantidadeModelos. Garantimos ambos.
+    quantidadeModelosArcos() {
+      const fromProp = Number(this.quantidadeModelos)
+      if (Number.isFinite(fromProp) && fromProp > 0) return fromProp
+      const byModelos = this.config?.modelosArcos ? Object.keys(this.config.modelosArcos).length : 0
+      return byModelos || 1
+    },
     quantidadeArcos() {
       const topo = this.config?.topo || {}
       const totalArcosTopo = parseInt(topo.totalArcos)
@@ -359,21 +367,84 @@ export default {
       
       // Helper para obter modelo lateral do arco (prioriza mapa; default: frente=1, fundo=N)
       const modeloLateralDoArco = (arcoNum) => {
+        // 1) Mapa explícito sempre vence
         const m = this.lateralMapaArcos?.[arcoNum]
         if (m) return m
-        if (this.lateralModelos.frente && arcoNum === 1) return 'frente'
-        if (this.lateralModelos.fundo && arcoNum === (this.quantidadeArcos || 1)) return 'fundo'
-        if (this.usaRegraParImpar && (this.lateralModelos.par || this.lateralModelos.impar)) {
+        const total = this.quantidadeArcos || 1
+        // 2) Frente/Fundo agregados (regra 3)
+        if (arcoNum === 1 || arcoNum === total) {
+          if (this.lateralModelos.frente_fundo) return 'frente_fundo'
+          if (this.lateralModelos.frente && arcoNum === 1) return 'frente'
+          if (this.lateralModelos.fundo && arcoNum === total) return 'fundo'
+        }
+        // 3) Distribuição por quantidade de modelos — não dependa da existência de chaves no lateralModelos
+        const q = this.quantidadeModelosArcos
+        if (q === 1) return 'todos'
+        if (q === 2) return arcoNum % 2 === 0 ? 'par' : 'impar'
+        if (q === 3) {
+          if (arcoNum === 1 || arcoNum === total) return 'frente_fundo'
           return arcoNum % 2 === 0 ? 'par' : 'impar'
         }
+        if (q === 4) {
+          if (arcoNum === 1) return 'frente'
+          if (arcoNum === total) return 'fundo'
+          return arcoNum % 2 === 0 ? 'par' : 'impar'
+        }
+        // 4) fallback — tenta usar 'todos' se existir, senão null
+        if (this.lateralModelos.todos) return 'todos'
         return null
       }
+      // 🪞 Helper para espelhar padrão (inverter posições horizontais: 0.2 -> 0.8, etc)
+      const espelharPadrao = (padrao) => {
+        return padrao.map(valor => 1 - valor)
+      }
+      
+      // 🎯 Helper para determinar se o modelo deve ser espelhado baseado na lógica de modelos
+      const deveEspelhar = (arcoNum, modelKey, totalArcos) => {
+        // Se espelhamento desabilitado globalmente, não espelhar
+        // Por padrão, espelhamento está ativo (somente desativa se explicitamente false)
+        const espelhamentoAtivo = this.config?.espelhamentoAtivo !== false
+        if (!espelhamentoAtivo) return false
+        
+        // Lógica baseada na quantidade de modelos
+        if (this.quantidadeModelosArcos === 1) {
+          // Modelo único: não espelhar (todos iguais)
+          return false
+        } else if (this.quantidadeModelosArcos === 2) {
+          // 2 modelos (Par/Ímpar): espelhar os pares
+          return arcoNum % 2 === 0
+        } else if (this.quantidadeModelosArcos === 3) {
+          // 3 modelos (Frente/Fundo + Par/Ímpar)
+          // Primeiro e último são iguais (frente/fundo), meio intercala par/ímpar
+          if (arcoNum === 1 || arcoNum === totalArcos) {
+            return false // Frente e fundo não espelham
+          } else {
+            return arcoNum % 2 === 0 // Meio espelha os pares
+          }
+        } else if (this.quantidadeModelosArcos === 4) {
+          // 4 modelos (Frente/Par/Ímpar/Fundo)
+          // Primeiro (frente) não espelha, intercala par/ímpar até penúltimo, último (fundo) não espelha
+          if (arcoNum === 1 || arcoNum === totalArcos) {
+            return false // Frente e fundo não espelham
+          } else {
+            return arcoNum % 2 === 0 // Meio espelha os pares
+          }
+        }
+        return false
+      }
+      
       // Helper para gerar padrão X relativo (0..1) repetindo conforme necessário
-      const gerarPadraoRelX = (modelKey, qtd) => {
+      const gerarPadraoRelX = (modelKey, qtd, arcoNum) => {
         const modelo = modelKey ? this.lateralModelos[modelKey] || {} : {}
         const base = Array.isArray(modelo.padraoXRel) && modelo.padraoXRel.length ? modelo.padraoXRel : [0.5]
-        const padrao = []
+        let padrao = []
         for (let i = 0; i < qtd; i++) padrao.push(base[i % base.length])
+        
+        // 🪞 Aplicar espelhamento se necessário
+        if (deveEspelhar(arcoNum, modelKey, this.quantidadeArcos)) {
+          padrao = espelharPadrao(padrao)
+        }
+        
         return padrao
       }
 
@@ -397,7 +468,7 @@ export default {
         const arcoNum = arcoIndex + 1
         const xInicioArco = this.margemX + (larguraArco * arcoIndex)
         const modeloKey = modeloLateralDoArco(arcoNum)
-        const padraoRelX = gerarPadraoRelX(modeloKey, qtdPendulos)
+        const padraoRelX = gerarPadraoRelX(modeloKey, qtdPendulos, arcoNum)
         
         for (let i = 1; i <= qtdPendulos; i++) {
           const penduloId = `${this.modeloAtual}_${i}`
@@ -431,93 +502,68 @@ export default {
         }
       } else {
         // Visualização geral
-        if (totalPendulosTopo > 0) {
-          // Distribuir pêndulos uniformemente entre os arcos conforme config.topo
-          const base = Math.floor(totalPendulosTopo / Math.max(totalArcos, 1))
-          const resto = totalPendulosTopo % Math.max(totalArcos, 1)
-          let contadorGlobal = 1
-          
-          for (let arcoIndex = 0; arcoIndex < totalArcos; arcoIndex++) {
-            const arcoNum = arcoIndex + 1
-            const xInicioArco = this.margemX + (larguraArco * arcoIndex)
-            const pendulosNesteArco = base + (arcoIndex < resto ? 1 : 0)
-            const modeloKey = modeloLateralDoArco(arcoNum)
-            const padraoRelX = gerarPadraoRelX(modeloKey, pendulosNesteArco)
-            
-            for (let i = 1; i <= pendulosNesteArco; i++) {
-              const penduloId = `A${arcoNum}_${i}`
-              // 🎯 PRIORIDADE: usar lateralPadraoArcos se disponível, senão padrão do modelo
-              let xRel = padraoRelX[i - 1]
-              if (this.lateralPadraoArcos?.[arcoNum]?.[penduloId] != null) {
-                xRel = this.lateralPadraoArcos[arcoNum][penduloId]
-              }
-              const xPos = centerX(arcoIndex)
-              const yPos = yFromRel(xRel)
-              if (this.posicoesManualPendulos[penduloId]) {
-                pendulos.push({
-                  label: `${arcoNum}.${i}`,
-                  id: penduloId,
-                  numeroCabo: contadorGlobal,
-                  arcoNumero: arcoNum,
-                  x: this.posicoesManualPendulos[penduloId].x,
-                  y: this.posicoesManualPendulos[penduloId].y
-                })
-              } else {
-                pendulos.push({
-                  label: `${arcoNum}.${i}`,
-                  id: penduloId,
-                  numeroCabo: contadorGlobal,
-                  arcoNumero: arcoNum,
-                  x: xPos,
-                  y: yPos
-                })
-              }
-              contadorGlobal++
+        // Preferir a quantidade por modelo configurado na lateral quando houver modelos definidos
+        const temModelos = this.config.modelosArcos && Object.keys(this.config.modelosArcos).length > 0
+        const encontrarModeloPorTipo = (tipo) => {
+          if (!temModelos) return null
+          const entries = Object.entries(this.config.modelosArcos)
+          let found = entries.find(([, m]) => m && m.posicao === tipo)
+          if (!found && tipo === 'frente_fundo') {
+            found = entries.find(([, m]) => m && (m.posicao === 'frente' || m.posicao === 'fundo'))
+          }
+          if (!found && tipo === 'todos') {
+            found = entries[0]
+          }
+          return found ? found[1] : null
+        }
+
+        let contadorGlobal = 1
+        for (let arcoIndex = 0; arcoIndex < totalArcos; arcoIndex++) {
+          const arcoNum = arcoIndex + 1
+          const modeloKey = modeloLateralDoArco(arcoNum)
+          const modeloDef = encontrarModeloPorTipo(modeloKey)
+          // Quantidade por arco: prioriza do modelo; se não houver, cai para distribuição uniforme de totalPendulosTopo
+          let pendulosNesteArco = modeloDef?.quantidadePendulos || 0
+          if (!pendulosNesteArco) {
+            if (totalPendulosTopo > 0) {
+              const base = Math.floor(totalPendulosTopo / Math.max(totalArcos, 1))
+              const resto = totalPendulosTopo % Math.max(totalArcos, 1)
+              pendulosNesteArco = base + (arcoIndex < resto ? 1 : 0)
+            } else {
+              pendulosNesteArco = 0
             }
           }
-        } else if (this.config.modelosArcos) {
-          // Fallback: usar definição dos modelosArcos com numeração global
-          const arcosOrdenados = Object.keys(this.config.modelosArcos).sort((a, b) => parseInt(a) - parseInt(b))
-          let contadorGlobal = 1
-          arcosOrdenados.forEach(arcoNumStr => {
-            const arcoNum = parseInt(arcoNumStr)
-            const modelo = this.config.modelosArcos[arcoNumStr]
-            const qtdPendulos = modelo?.quantidadePendulos || 0
-            const arcoIndex = arcoNum - 1
-            const xInicioArco = this.margemX + (larguraArco * arcoIndex)
-            const modeloKey = modeloLateralDoArco(arcoNum)
-            const padraoRelX = gerarPadraoRelX(modeloKey, qtdPendulos)
-            for (let i = 1; i <= qtdPendulos; i++) {
-              const penduloId = `${arcoNum}_${i}`
-              // 🎯 PRIORIDADE: usar lateralPadraoArcos se disponível, senão padrão do modelo
-              let xRel = padraoRelX[i - 1]
-              if (this.lateralPadraoArcos?.[arcoNum]?.[penduloId] != null) {
-                xRel = this.lateralPadraoArcos[arcoNum][penduloId]
-              }
-              const xPos = centerX(arcoIndex)
-              const yPos = yFromRel(xRel)
-              if (this.posicoesManualPendulos[penduloId]) {
-                pendulos.push({
-                  label: `${arcoNum}.${i}`,
-                  id: penduloId,
-                  numeroCabo: contadorGlobal,
-                  arcoNumero: arcoNum,
-                  x: this.posicoesManualPendulos[penduloId].x,
-                  y: this.posicoesManualPendulos[penduloId].y
-                })
-              } else {
-                pendulos.push({
-                  label: `${arcoNum}.${i}`,
-                  id: penduloId,
-                  numeroCabo: contadorGlobal,
-                  arcoNumero: arcoNum,
-                  x: xPos,
-                  y: yPos
-                })
-              }
-              contadorGlobal++
+
+          const padraoRelX = gerarPadraoRelX(modeloKey, pendulosNesteArco, arcoNum)
+          for (let i = 1; i <= pendulosNesteArco; i++) {
+            const penduloId = `A${arcoNum}_${i}`
+            let xRel = padraoRelX[i - 1]
+            if (this.lateralPadraoArcos?.[arcoNum]?.[penduloId] != null) {
+              xRel = this.lateralPadraoArcos[arcoNum][penduloId]
             }
-          })
+            const xPos = centerX(arcoIndex)
+            const yPos = yFromRel(xRel)
+            if (this.posicoesManualPendulos[penduloId]) {
+              pendulos.push({
+                label: `${arcoNum}.${i}`,
+                id: penduloId,
+                numeroCabo: contadorGlobal,
+                arcoNumero: arcoNum,
+                x: this.posicoesManualPendulos[penduloId].x,
+                y: this.posicoesManualPendulos[penduloId].y
+              })
+            } else {
+              pendulos.push({
+                label: `${arcoNum}.${i}`,
+                id: penduloId,
+                numeroCabo: contadorGlobal,
+                arcoNumero: arcoNum,
+                x: xPos,
+                y: yPos
+              })
+            }
+            contadorGlobal++
+          }
         }
       }
       
